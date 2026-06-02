@@ -244,3 +244,4 @@ GOOS=linux GOARCH=amd64 go build -o devlog-linux-amd64 .
 - **Write safety:** `devlog add` and `devlog sync` take per-file advisory locks and write atomically.
 - **Idempotent sync:** Running `devlog sync` multiple times deduplicates by commit SHA and PR number.
 - **Graceful degradation:** Missing `gh` CLI, no GitHub token, or repo without a GitHub remote is not an error — that source is skipped silently.
+- **Version:** `devlog --version` prints the build version (e.g. `v0.1.0`; `dev` when built from source).

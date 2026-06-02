@@ -26,3 +26,8 @@ func init() {
 func Execute() error {
 	return rootCmd.Execute()
 }
+
+// SetVersion injects the build version into the root command.
+func SetVersion(v string) {
+	rootCmd.Version = v
+}
