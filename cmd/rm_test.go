@@ -25,7 +25,7 @@ func TestRmBullet(t *testing.T) {
 		bullets := e.Sections["notes"]
 		id := 2
 		if id < 1 || id > len(bullets) {
-			return fmt.Errorf("id %d out of range: %d item(s)", id, len(bullets))
+			return fmt.Errorf("id %d out of range: section %q has %d item(s)", id, "notes", len(bullets))
 		}
 		e.Sections["notes"] = append(bullets[:id-1], bullets[id:]...)
 		return nil
