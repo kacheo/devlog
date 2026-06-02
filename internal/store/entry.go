@@ -9,23 +9,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Commit is a single git commit recorded in frontmatter.
 type Commit struct {
-	SHA     string `yaml:"sha"     json:"sha"`
-	Message string `yaml:"message" json:"message"`
-	Repo    string `yaml:"repo"    json:"repo"`
+	SHA      string `yaml:"sha"      json:"sha"`
+	Message  string `yaml:"message"  json:"message"`
+	Repo     string `yaml:"repo"     json:"repo"`
+	RepoSlug string `yaml:"repoSlug" json:"repoSlug"`
 }
 
-// PR is a GitHub pull request recorded in frontmatter.
 type PR struct {
 	Number int    `yaml:"number" json:"number"`
 	Title  string `yaml:"title"  json:"title"`
 	State  string `yaml:"state"  json:"state"`
 	Repo   string `yaml:"repo"   json:"repo"`
+	URL    string `yaml:"url"    json:"url"`
 }
 
-// frontmatter is the YAML block at the top of a day file.
-// Used only for unmarshaling (parsing). Serialization is done manually.
 type frontmatter struct {
 	Date    string   `yaml:"date"`
 	Tags    []string `yaml:"tags"`
@@ -33,21 +31,16 @@ type frontmatter struct {
 	PRs     []PR     `yaml:"prs"`
 }
 
-// DayEntry is the in-memory representation of a day file.
 type DayEntry struct {
 	Date    time.Time
 	Tags    []string
 	Commits []Commit
 	PRs     []PR
-	// Sections maps canonical lowercase section name to prose bullets.
 	Sections map[string][]string
 }
 
-// KnownSections lists canonical section names in file order.
 var KnownSections = []string{"notes", "commits", "prs", "blockers"}
 
-// NormalizeSection maps user-supplied section names to canonical names.
-// Returns ("", false) for unknown sections.
 func NormalizeSection(s string) (string, bool) {
 	switch strings.ToLower(s) {
 	case "note", "notes":
@@ -62,7 +55,6 @@ func NormalizeSection(s string) (string, bool) {
 	return "", false
 }
 
-// EmptyEntry creates a new DayEntry for the given date with all sections initialized.
 func EmptyEntry(date time.Time) *DayEntry {
 	sections := make(map[string][]string, len(KnownSections))
 	for _, s := range KnownSections {
@@ -75,8 +67,6 @@ func EmptyEntry(date time.Time) *DayEntry {
 	}
 }
 
-// Parse reads a day file's markdown content into a DayEntry.
-// Files with no frontmatter delimiter are parsed as body-only.
 func Parse(content []byte) (*DayEntry, error) {
 	entry := &DayEntry{
 		Sections: make(map[string][]string, len(KnownSections)),
@@ -87,18 +77,15 @@ func Parse(content []byte) (*DayEntry, error) {
 
 	body := content
 
-	// Detect frontmatter: file must start with "---\n"
 	if bytes.HasPrefix(content, []byte("---\n")) {
-		// Find the closing "---"
-		rest := content[4:] // skip opening "---\n"
+		rest := content[4:]
 		bodyOffset := -1
 		idx := bytes.Index(rest, []byte("\n---\n"))
 		if idx >= 0 {
-			bodyOffset = idx + 5 // skip "\n---\n"
+			bodyOffset = idx + 5
 		} else if bytes.HasSuffix(rest, []byte("\n---")) {
-			// Closing --- at EOF with no trailing newline
 			idx = len(rest) - 4
-			bodyOffset = len(rest) // body is empty
+			bodyOffset = len(rest)
 		}
 		if idx >= 0 {
 			fmBytes := rest[:idx]
@@ -130,7 +117,6 @@ func Parse(content []byte) (*DayEntry, error) {
 		}
 	}
 
-	// Parse body sections
 	var currentSection string
 	for _, line := range strings.Split(string(body), "\n") {
 		if strings.HasPrefix(line, "## ") {
@@ -141,8 +127,6 @@ func Parse(content []byte) (*DayEntry, error) {
 		}
 		if strings.HasPrefix(line, "- ") && currentSection != "" {
 			if _, ok := entry.Sections[currentSection]; ok {
-				// Only collect prose sections (notes and blockers)
-				// Commits and PRs body sections are display-only; skip them
 				if currentSection == "notes" || currentSection == "blockers" {
 					entry.Sections[currentSection] = append(
 						entry.Sections[currentSection],
@@ -156,16 +140,12 @@ func Parse(content []byte) (*DayEntry, error) {
 	return entry, nil
 }
 
-// Serialize renders a DayEntry to markdown bytes.
-// Section order is always: Notes, Commits, PRs, Blockers.
 func Serialize(e *DayEntry) ([]byte, error) {
 	var b bytes.Buffer
 
-	// Write frontmatter manually to control exact YAML formatting.
 	b.WriteString("---\n")
 	fmt.Fprintf(&b, "date: %s\n", e.Date.Format("2006-01-02"))
 
-	// tags
 	tags := e.Tags
 	if len(tags) == 0 {
 		b.WriteString("tags: []\n")
@@ -180,26 +160,24 @@ func Serialize(e *DayEntry) ([]byte, error) {
 		b.WriteString("]\n")
 	}
 
-	// commits
 	commits := e.Commits
 	if len(commits) == 0 {
 		b.WriteString("commits: []\n")
 	} else {
 		b.WriteString("commits:\n")
 		for _, c := range commits {
-			fmt.Fprintf(&b, "  - {sha: %s, message: %q, repo: %s}\n", c.SHA, c.Message, c.Repo)
+			fmt.Fprintf(&b, "  - {sha: %s, message: %q, repo: %s, repoSlug: %s}\n", c.SHA, c.Message, c.Repo, c.RepoSlug)
 		}
 	}
 
-	// prs
 	prs := e.PRs
 	if len(prs) == 0 {
 		b.WriteString("prs: []\n")
 	} else {
 		b.WriteString("prs:\n")
 		for _, pr := range prs {
-			fmt.Fprintf(&b, "  - {number: %d, title: %q, state: %s, repo: %s}\n",
-				pr.Number, pr.Title, pr.State, pr.Repo)
+			fmt.Fprintf(&b, "  - {number: %d, title: %q, state: %s, repo: %s, url: %s}\n",
+				pr.Number, pr.Title, pr.State, pr.Repo, pr.URL)
 		}
 	}
 

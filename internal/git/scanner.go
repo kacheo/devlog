@@ -46,7 +46,10 @@ func ScanCommits(repoPath, repoName string, targetDate time.Time) ([]store.Commi
 		if !ok {
 			continue
 		}
-		commits = append(commits, store.Commit{SHA: sha, Message: msg, Repo: repoName})
+		slug, _ := GetOriginSlug(repoPath)
+		commits = append(commits, store.Commit{
+			SHA: sha, Message: msg, Repo: repoName, RepoSlug: slug,
+		})
 	}
 	return commits, nil
 }
