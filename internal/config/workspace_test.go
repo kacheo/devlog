@@ -71,3 +71,77 @@ func TestDiscoverRepos_ErrorOnUnreadableDir(t *testing.T) {
 		t.Fatalf("expected error for non-existent dir, got repos: %v", repos)
 	}
 }
+
+func TestEffectiveRepos_MergesWorkspaceRepos(t *testing.T) {
+	ws := t.TempDir()
+	makeGitRepo(t, ws, "discovered")
+
+	cfg := &Config{
+		Workspaces: []WorkspaceConfig{
+			{Path: ws, Name: "test-ws"},
+		},
+	}
+
+	repos, err := cfg.EffectiveRepos()
+	if err != nil {
+		t.Fatalf("EffectiveRepos: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1, got %d: %v", len(repos), repos)
+	}
+	if repos[0].Name != "discovered" {
+		t.Errorf("expected name 'discovered', got %q", repos[0].Name)
+	}
+}
+
+func TestEffectiveRepos_DeduplicatesByPath(t *testing.T) {
+	ws := t.TempDir()
+	repoPath := makeGitRepo(t, ws, "shared")
+
+	cfg := &Config{
+		Repos: []RepoConfig{
+			{Path: repoPath, Name: "explicit-name", GitHubSlug: "org/shared"},
+		},
+		Workspaces: []WorkspaceConfig{
+			{Path: ws, Name: "test-ws"},
+		},
+	}
+
+	repos, err := cfg.EffectiveRepos()
+	if err != nil {
+		t.Fatalf("EffectiveRepos: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1 (deduped), got %d: %v", len(repos), repos)
+	}
+	// Explicit entry wins — keeps its name and github_slug
+	if repos[0].Name != "explicit-name" {
+		t.Errorf("explicit entry should win, got name %q", repos[0].Name)
+	}
+	if repos[0].GitHubSlug != "org/shared" {
+		t.Errorf("explicit entry should win, got slug %q", repos[0].GitHubSlug)
+	}
+}
+
+func TestEffectiveRepos_ExcludesHonored(t *testing.T) {
+	ws := t.TempDir()
+	makeGitRepo(t, ws, "keep")
+	excludedPath := makeGitRepo(t, ws, "skip")
+
+	cfg := &Config{
+		Workspaces: []WorkspaceConfig{
+			{Path: ws, Name: "test-ws", Exclude: []string{excludedPath}},
+		},
+	}
+
+	repos, err := cfg.EffectiveRepos()
+	if err != nil {
+		t.Fatalf("EffectiveRepos: %v", err)
+	}
+	if len(repos) != 1 {
+		t.Fatalf("expected 1, got %d: %v", len(repos), repos)
+	}
+	if repos[0].Name != "keep" {
+		t.Errorf("wrong repo kept: %+v", repos[0])
+	}
+}
