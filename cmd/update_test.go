@@ -1,69 +1,91 @@
-package cmd_test
+package cmd
 
 import (
-	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/kacheo/devlog/internal/store"
 )
 
-func TestUpdateBullet(t *testing.T) {
+func TestUpdateCmd_ReplacesBullet(t *testing.T) {
 	dir := t.TempDir()
-	st, _ := store.New(dir)
-	date := time.Date(2026, 1, 7, 0, 0, 0, 0, time.Local)
+	t.Setenv("DEVLOG_DIR", dir)
+	updateSection = "notes"
+	updateID = 0
+	globalDate = ""
 
-	if err := st.Modify(date, func(e *store.DayEntry) error {
-		e.Sections["notes"] = []string{"original text", "other note"}
-		return nil
-	}); err != nil {
-		t.Fatalf("setup Modify: %v", err)
+	// Seed a note via add
+	addSection = ""
+	addTags = nil
+	rootCmd.SetArgs([]string{"add", "original text"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("add: %v", err)
 	}
 
-	err := st.Modify(date, func(e *store.DayEntry) error {
-		bullets := e.Sections["notes"]
-		id := 1
-		if id < 1 || id > len(bullets) {
-			return fmt.Errorf("id %d out of range: %d item(s)", id, len(bullets))
-		}
-		e.Sections["notes"][id-1] = "updated text"
-		return nil
-	})
-	if err != nil {
+	// Update bullet #1
+	addSection = ""
+	addTags = nil
+	updateSection = "notes"
+	updateID = 1
+	rootCmd.SetArgs([]string{"update", "--section", "notes", "--id", "1", "updated text"})
+	if err := rootCmd.Execute(); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 
-	entry, _ := st.Load(date)
-	if entry.Sections["notes"][0] != "updated text" {
-		t.Fatalf("expected 'updated text', got %q", entry.Sections["notes"][0])
+	today := time.Now()
+	path := filepath.Join(dir, today.Format("2006-01-02")+".md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("day file not found: %v", err)
 	}
-	if entry.Sections["notes"][1] != "other note" {
-		t.Fatalf("expected 'other note' unchanged, got %q", entry.Sections["notes"][1])
+	entry, err := store.Parse(data)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(entry.Sections["notes"]) != 1 || entry.Sections["notes"][0] != "updated text" {
+		t.Errorf("notes = %v, want [updated text]", entry.Sections["notes"])
 	}
 }
 
-func TestUpdateBullet_OutOfRange(t *testing.T) {
+func TestUpdateCmd_OutOfRange_Errors(t *testing.T) {
 	dir := t.TempDir()
-	st, _ := store.New(dir)
-	date := time.Date(2026, 1, 8, 0, 0, 0, 0, time.Local)
+	t.Setenv("DEVLOG_DIR", dir)
+	updateSection = "notes"
+	updateID = 0
+	globalDate = ""
 
-	if err := st.Modify(date, func(e *store.DayEntry) error {
-		e.Sections["notes"] = []string{"only one"}
-		return nil
-	}); err != nil {
-		t.Fatalf("setup Modify: %v", err)
+	// Seed one note
+	addSection = ""
+	addTags = nil
+	rootCmd.SetArgs([]string{"add", "only note"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("add: %v", err)
 	}
 
-	err := st.Modify(date, func(e *store.DayEntry) error {
-		bullets := e.Sections["notes"]
-		id := 99
-		if id < 1 || id > len(bullets) {
-			return fmt.Errorf("id %d out of range: section %q has %d item(s)", id, "notes", len(bullets))
-		}
-		e.Sections["notes"][id-1] = "new text"
-		return nil
-	})
+	// Try to update out-of-range id
+	addSection = ""
+	addTags = nil
+	updateSection = "notes"
+	updateID = 99
+	rootCmd.SetArgs([]string{"update", "--section", "notes", "--id", "99", "new text"})
+	err := rootCmd.Execute()
 	if err == nil {
-		t.Fatal("expected error for out-of-range id")
+		t.Error("expected error for out-of-range id, got nil")
+	}
+}
+
+func TestUpdateCmd_UnknownSection_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	updateSection = "notes"
+	updateID = 1
+	globalDate = ""
+
+	rootCmd.SetArgs([]string{"update", "--section", "diary", "--id", "1", "text"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for unknown section, got nil")
 	}
 }
