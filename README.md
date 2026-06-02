@@ -367,4 +367,4 @@ Copy any of these into your conversation to direct Claude Code:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE).

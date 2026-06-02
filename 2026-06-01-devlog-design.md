@@ -3,7 +3,7 @@
 **Date:** 2026-06-01  
 **Status:** Draft  
 **Language:** Go  
-**License:** Open Source (MIT)
+**License:** Apache 2.0
 
 ---
 
@@ -388,7 +388,7 @@ devlog/
 
 ## Open Source Considerations
 
-- MIT license
+- Apache 2.0 license
 - `devlog init` detects missing config and prompts — no silent failures on first run
 - `CONTRIBUTING.md` should note the `internal/` boundary: external packages import only through `cmd/` surface
 - Releases via `goreleaser` with prebuilt binaries for macOS (arm64/amd64) and Linux (amd64)
