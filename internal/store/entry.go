@@ -13,7 +13,7 @@ type Commit struct {
 	SHA      string `yaml:"sha"      json:"sha"`
 	Message  string `yaml:"message"  json:"message"`
 	Repo     string `yaml:"repo"     json:"repo"`
-	RepoSlug string `yaml:"repoSlug" json:"repoSlug"`
+	RepoSlug string `yaml:"repo_slug" json:"repoSlug"`
 }
 
 type PR struct {
@@ -21,7 +21,7 @@ type PR struct {
 	Title  string `yaml:"title"  json:"title"`
 	State  string `yaml:"state"  json:"state"`
 	Repo   string `yaml:"repo"   json:"repo"`
-	URL    string `yaml:"url"    json:"url"`
+	URL    string `yaml:"url,omitempty" json:"url"`
 }
 
 type frontmatter struct {
@@ -166,7 +166,7 @@ func Serialize(e *DayEntry) ([]byte, error) {
 	} else {
 		b.WriteString("commits:\n")
 		for _, c := range commits {
-			fmt.Fprintf(&b, "  - {sha: %s, message: %q, repo: %s, repoSlug: %s}\n", c.SHA, c.Message, c.Repo, c.RepoSlug)
+			fmt.Fprintf(&b, "  - {sha: %s, message: %q, repo: %s, repo_slug: %s}\n", c.SHA, c.Message, c.Repo, c.RepoSlug)
 		}
 	}
 
