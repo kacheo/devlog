@@ -111,7 +111,6 @@ func runInitInteractive(cmd *cobra.Command, cfg *config.Config, cfgPath string) 
 	allRepos, err := cfg.EffectiveRepos()
 	if err != nil {
 		fmt.Fprintf(w, "warning: discovering workspace repos: %v\n", err)
-		allRepos = cfg.Repos
 	}
 	for _, repo := range allRepos {
 		hookPath := filepath.Join(repo.Path, ".git", "hooks", "post-commit")

@@ -37,17 +37,9 @@ func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) (*store.D
 		return nil, fmt.Errorf("loading day file: %w", err)
 	}
 
-	for _, ws := range cfg.Workspaces {
-		if _, statErr := os.Stat(ws.Path); os.IsNotExist(statErr) {
-			if !quiet {
-				fmt.Fprintf(os.Stderr, "warning: workspace path %q not found, skipping\n", ws.Path)
-			}
-		}
-	}
-
 	repos, err := cfg.EffectiveRepos()
-	if err != nil {
-		return nil, fmt.Errorf("resolving repos: %w", err)
+	if err != nil && !quiet {
+		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
 	}
 
 	for _, repo := range repos {
