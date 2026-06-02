@@ -16,7 +16,7 @@ var (
 )
 
 var rmCmd = &cobra.Command{
-	Use:   "rm",
+	Use:   "rm [--section <s>] --id <n>",
 	Short: "Remove a bullet from a section by its 1-based index",
 	Args:  cobra.NoArgs,
 	RunE:  runRm,
@@ -51,12 +51,16 @@ func runRm(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
 	}
 
-	return st.Modify(date, func(entry *store.DayEntry) error {
+	if err := st.Modify(date, func(entry *store.DayEntry) error {
 		bullets := entry.Sections[canonical]
 		if rmID < 1 || rmID > len(bullets) {
 			return fmt.Errorf("id %d out of range: section %q has %d item(s)", rmID, canonical, len(bullets))
 		}
 		entry.Sections[canonical] = append(bullets[:rmID-1], bullets[rmID:]...)
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Removed [%d] from %s.\n", rmID, canonical)
+	return nil
 }
