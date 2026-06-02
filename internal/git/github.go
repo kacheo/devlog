@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/kacheo/devlog/internal/store"
@@ -198,11 +197,3 @@ func sameDay(a, b time.Time) bool {
 	return ay == by && am == bm && ad == bd
 }
 
-// getUserEmailFromGit is a helper used by callers to get the local git user email.
-func getUserEmailFromGit(repoPath string) (string, error) {
-	out, err := exec.Command("git", "-C", repoPath, "config", "user.email").Output()
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(out)), nil
-}
