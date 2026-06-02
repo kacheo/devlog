@@ -63,6 +63,22 @@ If using `~/.local/bin/`, add it to your shell config if it isn't already:
 export PATH="$PATH:$HOME/.local/bin"
 ```
 
+### Build from source
+
+```bash
+git clone https://github.com/kacheo/devlog.git
+cd devlog
+go install .
+```
+
+Requires Go 1.26.1 or later. This installs the binary to `$(go env GOPATH)/bin` (or `$GOBIN` if set). Ensure that directory is in your `$PATH`.
+
+For a specific output location instead:
+
+```bash
+go build -o /usr/local/bin/devlog .
+```
+
 ---
 
 ## Quick Start
