@@ -44,7 +44,7 @@ func fetchPRsViaGH(ownerRepo, repoName string, targetDate time.Time) ([]store.PR
 		"--repo", ownerRepo,
 		"--author=@me",
 		"--state=all",
-		"--json", "number,title,state,updatedAt",
+		"--json", "number,title,state,updatedAt,url",
 	).Output()
 	if err != nil {
 		return nil, fmt.Errorf("gh pr list: %w", err)
@@ -66,6 +66,7 @@ type ghPRItem struct {
 	Title     string `json:"title"`
 	State     string `json:"state"`
 	UpdatedAt string `json:"updatedAt"`
+	URL       string `json:"url"`
 }
 
 // parseGHOutput parses `gh pr list --json` output and filters to targetDate.
@@ -85,6 +86,7 @@ func parseGHOutput(raw string, targetDate time.Time) ([]store.PR, error) {
 				Number: item.Number,
 				Title:  item.Title,
 				State:  item.State,
+				URL:    item.URL,
 			})
 		}
 	}
@@ -159,6 +161,7 @@ type restPRItem struct {
 	Title     string `json:"title"`
 	State     string `json:"state"`
 	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string `json:"html_url"`
 	User      struct {
 		Login string `json:"login"`
 	} `json:"user"`
@@ -184,6 +187,7 @@ func parseRESTOutput(raw string, targetDate time.Time, authorLogin string) ([]st
 				Number: item.Number,
 				Title:  item.Title,
 				State:  item.State,
+				URL:    item.HTMLURL,
 			})
 		}
 	}
