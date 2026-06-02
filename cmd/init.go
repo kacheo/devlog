@@ -107,8 +107,9 @@ func runInitInteractive(cmd *cobra.Command, cfg *config.Config, cfgPath string) 
 	}
 	fmt.Fprintf(w, "Config written to %s\n", cfgPath) //nolint:errcheck
 
-	// Offer hook installation for each repo
-	for _, repo := range cfg.Repos {
+	// Offer hook installation for each effective repo (explicit + workspace-discovered)
+	allRepos, _ := cfg.EffectiveRepos()
+	for _, repo := range allRepos {
 		hookPath := filepath.Join(repo.Path, ".git", "hooks", "post-commit")
 		fmt.Fprintf(w, "Install post-commit hook in %s? [y/N]: ", repo.Name) //nolint:errcheck
 		line, _ = r.ReadString('\n')

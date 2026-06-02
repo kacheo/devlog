@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,9 @@ func DiscoverRepos(dir string, exclude []string) ([]RepoConfig, error) {
 
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil // workspace dir gone; caller decides whether to warn
+		}
 		return nil, fmt.Errorf("reading workspace dir %q: %w", dir, err)
 	}
 
