@@ -255,7 +255,7 @@ exclude = ["~/projects/dotfiles"]
 	if ws.Name != "main" {
 		t.Errorf("expected name 'main', got %q", ws.Name)
 	}
-	if len(ws.Exclude) != 1 || ws.Exclude[0] != filepath.Join(home, "projects/dotfiles") {
+	if len(ws.Exclude) != 1 || ws.Exclude[0] != filepath.Join(home, "projects", "dotfiles") {
 		t.Errorf("unexpected exclude: %v", ws.Exclude)
 	}
 }
