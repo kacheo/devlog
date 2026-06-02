@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // DiscoverRepos scans dir one level deep for git repositories.
@@ -52,10 +53,12 @@ func (c *Config) EffectiveRepos() ([]RepoConfig, error) {
 		seen[r.Path] = true
 	}
 
+	var errs []string
 	for _, ws := range c.Workspaces {
 		discovered, err := DiscoverRepos(ws.Path, ws.Exclude)
 		if err != nil {
-			return nil, fmt.Errorf("workspace %q: %w", ws.Name, err)
+			errs = append(errs, fmt.Sprintf("workspace %q: %v", ws.Name, err))
+			continue
 		}
 		for _, r := range discovered {
 			if !seen[r.Path] {
@@ -63,6 +66,9 @@ func (c *Config) EffectiveRepos() ([]RepoConfig, error) {
 				result = append(result, r)
 			}
 		}
+	}
+	if len(errs) > 0 {
+		return result, errors.New(strings.Join(errs, "; "))
 	}
 	return result, nil
 }

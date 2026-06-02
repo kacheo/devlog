@@ -152,3 +152,24 @@ func TestWorkspaceList_ShowsExcludeListWhenAllReposExcluded(t *testing.T) {
 		t.Errorf("expected excluded repo path in output, got:\n%s", out)
 	}
 }
+
+func TestWorkspaceExclude_RejectsNestedPath(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "config.toml")
+	wsDir := t.TempDir()
+	cfg := &config.Config{
+		Workspaces: []config.WorkspaceConfig{
+			{Path: wsDir, Name: filepath.Base(wsDir)},
+		},
+	}
+	_ = cfg.Write(cfgPath)
+
+	// Two levels deep — not a direct child of wsDir.
+	nestedPath := filepath.Join(wsDir, "team", "svc")
+	_, err := excludeRepoFromWorkspace(cfgPath, nestedPath)
+	if err == nil {
+		t.Fatal("expected error for nested path that can never be discovered")
+	}
+	if !strings.Contains(err.Error(), "no workspace found") {
+		t.Errorf("expected 'no workspace found' error, got: %v", err)
+	}
+}

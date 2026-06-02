@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -107,7 +106,7 @@ func excludeRepoFromWorkspace(cfgPath, repoPath string) (bool, error) {
 		return false, err
 	}
 	for i, ws := range cfg.Workspaces {
-		if strings.HasPrefix(repoPath, ws.Path+string(os.PathSeparator)) {
+		if filepath.Dir(repoPath) == ws.Path {
 			for _, e := range ws.Exclude {
 				if e == repoPath {
 					return false, nil

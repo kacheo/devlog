@@ -165,3 +165,29 @@ func TestEffectiveRepos_SkipsMissingWorkspaceDir(t *testing.T) {
 		t.Fatalf("expected empty repos for missing workspace, got: %v", repos)
 	}
 }
+
+func TestEffectiveRepos_DegradesBadWorkspace(t *testing.T) {
+	// Create a file where the workspace dir is expected — os.ReadDir returns ENOTDIR.
+	badWS := filepath.Join(t.TempDir(), "not-a-dir")
+	if err := os.WriteFile(badWS, []byte(""), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	explicitRepo := makeGitRepo(t, t.TempDir(), "explicit")
+	cfg := &Config{
+		Repos: []RepoConfig{
+			{Path: explicitRepo, Name: "explicit"},
+		},
+		Workspaces: []WorkspaceConfig{
+			{Path: badWS, Name: "bad-ws"},
+		},
+	}
+
+	repos, err := cfg.EffectiveRepos()
+	if err == nil {
+		t.Fatal("expected non-nil error for unreadable workspace")
+	}
+	if len(repos) != 1 || repos[0].Path != explicitRepo {
+		t.Errorf("expected explicit repo to still be returned, got: %v", repos)
+	}
+}
