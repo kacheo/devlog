@@ -40,7 +40,7 @@ func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) (*store.D
 	for _, ws := range cfg.Workspaces {
 		if _, statErr := os.Stat(ws.Path); os.IsNotExist(statErr) {
 			if !quiet {
-				fmt.Fprintf(os.Stderr, "warning: workspace path %q not found, skipping\n", ws.Name)
+				fmt.Fprintf(os.Stderr, "warning: workspace path %q not found, skipping\n", ws.Path)
 			}
 		}
 	}
@@ -111,7 +111,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), string(out)) //nolint:errcheck
+			fmt.Fprintln(cmd.OutOrStdout(), string(out))
 		} else {
 			render.ShowTerminal(entry, cmd.OutOrStdout())
 		}
