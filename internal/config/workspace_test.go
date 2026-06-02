@@ -1,11 +1,9 @@
-package config_test
+package config
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/kacheo/devlog/internal/config"
 )
 
 func makeGitRepo(t *testing.T, parent, name string) string {
@@ -24,7 +22,7 @@ func TestDiscoverRepos_FindsGitDirs(t *testing.T) {
 	// non-git dir
 	os.MkdirAll(filepath.Join(ws, "not-a-repo"), 0755)
 
-	repos, err := config.DiscoverRepos(ws, nil)
+	repos, err := DiscoverRepos(ws, nil)
 	if err != nil {
 		t.Fatalf("DiscoverRepos: %v", err)
 	}
@@ -42,7 +40,7 @@ func TestDiscoverRepos_RespectsExclude(t *testing.T) {
 	makeGitRepo(t, ws, "keep")
 	excluded := makeGitRepo(t, ws, "skip")
 
-	repos, err := config.DiscoverRepos(ws, []string{excluded})
+	repos, err := DiscoverRepos(ws, []string{excluded})
 	if err != nil {
 		t.Fatalf("DiscoverRepos: %v", err)
 	}
@@ -58,11 +56,18 @@ func TestDiscoverRepos_NameIsBasename(t *testing.T) {
 	ws := t.TempDir()
 	makeGitRepo(t, ws, "my-service")
 
-	repos, err := config.DiscoverRepos(ws, nil)
+	repos, err := DiscoverRepos(ws, nil)
 	if err != nil {
 		t.Fatalf("DiscoverRepos: %v", err)
 	}
 	if len(repos) != 1 || repos[0].Name != "my-service" {
 		t.Errorf("expected name 'my-service', got %+v", repos)
+	}
+}
+
+func TestDiscoverRepos_ErrorOnUnreadableDir(t *testing.T) {
+	repos, err := DiscoverRepos("/nonexistent-dir-that-does-not-exist", nil)
+	if err == nil {
+		t.Fatalf("expected error for non-existent dir, got repos: %v", repos)
 	}
 }
