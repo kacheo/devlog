@@ -16,8 +16,8 @@ func ShowTerminal(entry *store.DayEntry, w io.Writer) {
 	}
 	if len(entry.Sections["notes"]) > 0 {
 		fmt.Fprintln(w, "Notes:")
-		for _, n := range entry.Sections["notes"] {
-			fmt.Fprintf(w, "  • %s\n", n)
+		for i, n := range entry.Sections["notes"] {
+			fmt.Fprintf(w, "  [%d] %s\n", i+1, n)
 		}
 	}
 	if len(entry.Commits) > 0 {
@@ -32,10 +32,16 @@ func ShowTerminal(entry *store.DayEntry, w io.Writer) {
 			fmt.Fprintf(w, "  • PR #%d %s [%s] (%s)\n", pr.Number, pr.Title, pr.State, pr.Repo)
 		}
 	}
+	if len(entry.Sections["action_items"]) > 0 {
+		fmt.Fprintln(w, "Action Items:")
+		for i, a := range entry.Sections["action_items"] {
+			fmt.Fprintf(w, "  [%d] %s\n", i+1, a)
+		}
+	}
 	if len(entry.Sections["blockers"]) > 0 {
 		fmt.Fprintln(w, "Blockers:")
-		for _, b := range entry.Sections["blockers"] {
-			fmt.Fprintf(w, "  • %s\n", b)
+		for i, b := range entry.Sections["blockers"] {
+			fmt.Fprintf(w, "  [%d] %s\n", i+1, b)
 		}
 	}
 }

@@ -39,7 +39,7 @@ type DayEntry struct {
 	Sections map[string][]string
 }
 
-var KnownSections = []string{"notes", "commits", "prs", "blockers"}
+var KnownSections = []string{"notes", "action_items", "blockers"}
 
 func NormalizeSection(s string) (string, bool) {
 	switch strings.ToLower(s) {
@@ -47,10 +47,8 @@ func NormalizeSection(s string) (string, bool) {
 		return "notes", true
 	case "blocker", "blockers":
 		return "blockers", true
-	case "commit", "commits":
-		return "commits", true
-	case "pr", "prs":
-		return "prs", true
+	case "action", "action_item", "action_items", "action items":
+		return "action_items", true
 	}
 	return "", false
 }
@@ -127,12 +125,10 @@ func Parse(content []byte) (*DayEntry, error) {
 		}
 		if strings.HasPrefix(line, "- ") && currentSection != "" {
 			if _, ok := entry.Sections[currentSection]; ok {
-				if currentSection == "notes" || currentSection == "blockers" {
-					entry.Sections[currentSection] = append(
-						entry.Sections[currentSection],
-						strings.TrimPrefix(line, "- "),
-					)
-				}
+				entry.Sections[currentSection] = append(
+					entry.Sections[currentSection],
+					strings.TrimPrefix(line, "- "),
+				)
 			}
 		}
 	}
@@ -189,29 +185,17 @@ func Serialize(e *DayEntry) ([]byte, error) {
 	b.WriteString("---\n")
 
 	sectionTitles := map[string]string{
-		"notes":    "Notes",
-		"commits":  "Commits",
-		"prs":      "PRs",
-		"blockers": "Blockers",
+		"notes":        "Notes",
+		"action_items": "Action Items",
+		"blockers":     "Blockers",
 	}
 
 	for _, sec := range KnownSections {
 		b.WriteString("\n## ")
 		b.WriteString(sectionTitles[sec])
 		b.WriteString("\n")
-		switch sec {
-		case "commits":
-			for _, c := range e.Commits {
-				fmt.Fprintf(&b, "- %s %s (%s)\n", c.SHA, c.Message, c.Repo)
-			}
-		case "prs":
-			for _, pr := range e.PRs {
-				fmt.Fprintf(&b, "- #%d %s [%s] (%s)\n", pr.Number, pr.Title, pr.State, pr.Repo)
-			}
-		default:
-			for _, line := range e.Sections[sec] {
-				fmt.Fprintf(&b, "- %s\n", line)
-			}
+		for _, line := range e.Sections[sec] {
+			fmt.Fprintf(&b, "- %s\n", line)
 		}
 	}
 
