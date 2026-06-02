@@ -50,20 +50,12 @@ func runEdit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
 	}
 
-	// Ensure the file exists
-	entry, err := st.LoadOrCreate(date)
-	if err != nil {
-		return fmt.Errorf("loading day file: %w", err)
+	// Ensure the file exists (Modify creates it if missing)
+	if err := st.Modify(date, func(_ *store.DayEntry) error { return nil }); err != nil {
+		return fmt.Errorf("creating day file: %w", err)
 	}
 
 	path := st.DayFilePath(date)
-
-	// Create the file if it doesn't exist yet
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := st.Save(entry); err != nil {
-			return fmt.Errorf("creating day file: %w", err)
-		}
-	}
 
 	// Open in editor
 	editor := cfg.ResolvedEditor()

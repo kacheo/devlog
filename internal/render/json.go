@@ -16,10 +16,11 @@ type showDayJSON struct {
 }
 
 type showSectionsJSON struct {
-	Notes    []string       `json:"notes"`
-	Commits  []store.Commit `json:"commits"`
-	PRs      []store.PR     `json:"prs"`
-	Blockers []string       `json:"blockers"`
+	Notes       []string       `json:"notes"`
+	ActionItems []string       `json:"action_items"`
+	Commits     []store.Commit `json:"commits"`
+	PRs         []store.PR     `json:"prs"`
+	Blockers    []string       `json:"blockers"`
 }
 
 // ShowJSON serializes a single DayEntry to JSON (show --json).
@@ -33,10 +34,11 @@ func ShowJSON(entry *store.DayEntry) ([]byte, error) {
 		Date:    entry.Date.Format("2006-01-02"),
 		Tags:    notNilStrings(entry.Tags),
 		Sections: showSectionsJSON{
-			Notes:    notNilStrings(entry.Sections["notes"]),
-			Commits:  notNilCommits(entry.Commits),
-			PRs:      notNilPRs(entry.PRs),
-			Blockers: notNilStrings(entry.Sections["blockers"]),
+			Notes:       notNilStrings(entry.Sections["notes"]),
+			ActionItems: notNilStrings(entry.Sections["action_items"]),
+			Commits:     notNilCommits(entry.Commits),
+			PRs:         notNilPRs(entry.PRs),
+			Blockers:    notNilStrings(entry.Sections["blockers"]),
 		},
 	}
 	return json.Marshal(v)
@@ -57,10 +59,11 @@ func toDayJSON(e *store.DayEntry) showDayJSON {
 		Date:    e.Date.Format("2006-01-02"),
 		Tags:    notNilStrings(e.Tags),
 		Sections: showSectionsJSON{
-			Notes:    notNilStrings(e.Sections["notes"]),
-			Commits:  notNilCommits(e.Commits),
-			PRs:      notNilPRs(e.PRs),
-			Blockers: notNilStrings(e.Sections["blockers"]),
+			Notes:       notNilStrings(e.Sections["notes"]),
+			ActionItems: notNilStrings(e.Sections["action_items"]),
+			Commits:     notNilCommits(e.Commits),
+			PRs:         notNilPRs(e.PRs),
+			Blockers:    notNilStrings(e.Sections["blockers"]),
 		},
 	}
 }
