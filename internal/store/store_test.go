@@ -154,14 +154,18 @@ func TestModify_PreservesExistingData(t *testing.T) {
 	st, _ := New(dir)
 	date := time.Date(2026, 1, 2, 0, 0, 0, 0, time.Local)
 
-	_ = st.Modify(date, func(e *DayEntry) error {
+	if err := st.Modify(date, func(e *DayEntry) error {
 		e.Sections["notes"] = append(e.Sections["notes"], "first")
 		return nil
-	})
-	_ = st.Modify(date, func(e *DayEntry) error {
+	}); err != nil {
+		t.Fatalf("first Modify: %v", err)
+	}
+	if err := st.Modify(date, func(e *DayEntry) error {
 		e.Sections["notes"] = append(e.Sections["notes"], "second")
 		return nil
-	})
+	}); err != nil {
+		t.Fatalf("second Modify: %v", err)
+	}
 
 	entry, _ := st.Load(date)
 	if len(entry.Sections["notes"]) != 2 {
