@@ -28,15 +28,40 @@ devlog keeps a structured daily journal as plain markdown files you can always o
 go install github.com/kacheo/devlog@latest
 ```
 
-### Homebrew (coming soon)
+The binary is placed in `~/go/bin` (default; run `go env GOPATH` if unsure). Make sure that directory is on your PATH:
 
 ```bash
-brew install kacheo/tap/devlog
+# Add to ~/.zshrc (macOS/zsh) or ~/.bashrc (Linux/bash)
+export PATH="$PATH:$HOME/go/bin"
 ```
+
+Then reload your shell (`source ~/.zshrc`) or open a new terminal.
+
+### Homebrew
+
+Not yet available. Use `go install` or download a binary below.
 
 ### Download binary
 
 Prebuilt binaries for macOS (arm64, amd64) and Linux (amd64) are available on the [releases page](https://github.com/kacheo/devlog/releases).
+
+After downloading, extract and move the binary to a directory on your PATH:
+
+```bash
+tar xzf devlog_*_*.tar.gz
+
+# macOS / Linux (system-wide, requires sudo)
+sudo mv devlog /usr/local/bin/
+
+# Or into a user-local bin dir (no sudo needed)
+mkdir -p ~/.local/bin && mv devlog ~/.local/bin/
+```
+
+If using `~/.local/bin/`, add it to your shell config if it isn't already:
+
+```bash
+export PATH="$PATH:$HOME/.local/bin"
+```
 
 ---
 
