@@ -326,6 +326,45 @@ devlog sync && devlog standup
 
 ---
 
+## Using with Claude Code
+
+devlog works out-of-the-box with Claude Code and other CLI agents. Add this to your project's `CLAUDE.md` to give your agent instructions:
+
+```markdown
+## Daily Journal
+
+Use devlog to track your work. After completing each task, log it:
+
+- `devlog add "description of what was done"` — appends to today's notes
+- `devlog add "blocker description" --section blockers` — logs an impediment
+- `devlog show today --json` — read today's entries to understand current context
+- `devlog standup` — generate a standup summary for review
+- `devlog sync --quiet && devlog standup` — sync git activity then produce standup
+
+The journal lives in `~/devlog/YYYY-MM-DD.md` as plain markdown — you can also open it directly in your editor.
+```
+
+### Example prompts for your agent
+
+Copy any of these into your conversation to direct Claude Code:
+
+**Log work after a task:**
+> After you finish the refactor, run `devlog add "Refactored auth middleware to use short-lived tokens"` so I can see what was done in my standup.
+
+**Check context before starting:**
+> Before you start work today, run `devlog show today --json` and tell me what the human was working on yesterday and what blockers exist.
+
+**Get a standup summary:**
+> Generate a standup summary for me with `devlog standup --json`, then print a human-readable version.
+
+**Sync and report:**
+> Sync today's git commits and PRs, then give me a summary of what was done: `devlog sync && devlog standup`.
+
+**Block a task:**
+> I can't proceed with the database migration until DevOps provisions the staging instance. Log this as a blocker: `devlog add "Waiting on DevOps to provision staging DB" --section blockers`.
+
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
