@@ -91,16 +91,18 @@ func Parse(content []byte) (*DayEntry, error) {
 	if bytes.HasPrefix(content, []byte("---\n")) {
 		// Find the closing "---"
 		rest := content[4:] // skip opening "---\n"
+		bodyOffset := -1
 		idx := bytes.Index(rest, []byte("\n---\n"))
-		if idx == -1 {
-			// Try "---" at end of file
-			if bytes.HasSuffix(rest, []byte("\n---")) {
-				idx = len(rest) - 4
-			}
+		if idx >= 0 {
+			bodyOffset = idx + 5 // skip "\n---\n"
+		} else if bytes.HasSuffix(rest, []byte("\n---")) {
+			// Closing --- at EOF with no trailing newline
+			idx = len(rest) - 4
+			bodyOffset = len(rest) // body is empty
 		}
 		if idx >= 0 {
 			fmBytes := rest[:idx]
-			body = rest[idx+5:] // skip "\n---\n"
+			body = rest[bodyOffset:]
 
 			var fm frontmatter
 			if err := yaml.Unmarshal(fmBytes, &fm); err != nil {

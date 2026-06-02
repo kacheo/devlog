@@ -98,6 +98,19 @@ func TestParse_EmptyFrontmatter(t *testing.T) {
 	}
 }
 
+func TestParse_FrontmatterNoTrailingNewline(t *testing.T) {
+	// Regression: frontmatter closed by "---" at EOF without trailing newline
+	// previously caused an out-of-bounds panic.
+	input := []byte("---\ndate: 2026-06-01\n---")
+	entry, err := Parse(input)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	if entry.Date.Format("2006-01-02") != "2026-06-01" {
+		t.Errorf("Date = %v, want 2026-06-01", entry.Date)
+	}
+}
+
 func TestParse_NoFrontmatter(t *testing.T) {
 	entry, err := Parse([]byte("## Notes\n- hello\n"))
 	if err != nil {
