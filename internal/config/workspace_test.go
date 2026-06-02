@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -66,10 +65,13 @@ func TestDiscoverRepos_NameIsBasename(t *testing.T) {
 	}
 }
 
-func TestDiscoverRepos_ErrorOnUnreadableDir(t *testing.T) {
+func TestDiscoverRepos_EmptyForMissingDir(t *testing.T) {
 	repos, err := DiscoverRepos("/nonexistent-dir-that-does-not-exist", nil)
-	if err == nil {
-		t.Fatalf("expected error for non-existent dir, got repos: %v", repos)
+	if err != nil {
+		t.Fatalf("expected no error for missing dir (graceful skip), got: %v", err)
+	}
+	if len(repos) != 0 {
+		t.Fatalf("expected empty repos for missing dir, got: %v", repos)
 	}
 }
 
@@ -147,17 +149,17 @@ func TestEffectiveRepos_ExcludesHonored(t *testing.T) {
 	}
 }
 
-func TestEffectiveRepos_WorkspaceErrorWrapsName(t *testing.T) {
+func TestEffectiveRepos_SkipsMissingWorkspaceDir(t *testing.T) {
 	cfg := &Config{
 		Workspaces: []WorkspaceConfig{
-			{Path: "/nonexistent-workspace-path", Name: "broken-ws"},
+			{Path: "/nonexistent-workspace-path", Name: "gone-ws"},
 		},
 	}
-	_, err := cfg.EffectiveRepos()
-	if err == nil {
-		t.Fatal("expected error for non-existent workspace path")
+	repos, err := cfg.EffectiveRepos()
+	if err != nil {
+		t.Fatalf("expected no error for missing workspace dir (graceful skip), got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "broken-ws") {
-		t.Errorf("error should contain workspace name, got: %v", err)
+	if len(repos) != 0 {
+		t.Fatalf("expected empty repos for missing workspace, got: %v", repos)
 	}
 }
