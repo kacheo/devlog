@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -26,6 +27,57 @@ func init() {
 	rootCmd.AddCommand(syncCmd)
 }
 
+func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) error {
+	st, err := store.New(cfg.Journal.Dir)
+	if err != nil {
+		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
+	}
+	entry, err := st.LoadOrCreate(date)
+	if err != nil {
+		return fmt.Errorf("loading day file: %w", err)
+	}
+
+	repos, err := cfg.EffectiveRepos()
+	if err != nil {
+		return fmt.Errorf("resolving repos: %w", err)
+	}
+
+	for _, repo := range repos {
+		if _, err := os.Stat(repo.Path); os.IsNotExist(err) {
+			if !quiet {
+				fmt.Fprintf(os.Stderr, "warning: repo path %q not found, skipping\n", repo.Path)
+			}
+			continue
+		}
+
+		commits, err := git.ScanCommits(repo.Path, repo.Name, date)
+		if err != nil {
+			if !quiet {
+				fmt.Fprintf(os.Stderr, "warning: scanning commits in %q: %v\n", repo.Name, err)
+			}
+		} else {
+			entry.Commits = mergeCommits(entry.Commits, commits)
+		}
+
+		ownerRepo := repo.GitHubSlug
+		if ownerRepo == "" {
+			ownerRepo, _ = git.GetOriginSlug(repo.Path)
+		}
+		if ownerRepo != "" {
+			prs, err := git.FetchPRs(ownerRepo, repo.Name, cfg.GitHub.Token, date)
+			if err != nil {
+				if !quiet {
+					fmt.Fprintf(os.Stderr, "warning: fetching PRs for %q: %v\n", repo.Name, err)
+				}
+			} else {
+				entry.PRs = mergePRs(entry.PRs, prs)
+			}
+		}
+	}
+
+	return st.Save(entry)
+}
+
 func runSync(cmd *cobra.Command, args []string) error {
 	cfg, err := config.Load(config.DefaultPath())
 	if err != nil {
@@ -37,61 +89,19 @@ func runSync(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	st, err := store.New(cfg.Journal.Dir)
-	if err != nil {
-		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
+	if err := runSyncWithConfig(cfg, date, syncQuiet); err != nil {
+		return err
 	}
 
-	entry, err := st.LoadOrCreate(date)
-	if err != nil {
-		return fmt.Errorf("loading day file: %w", err)
-	}
-
-	// Scan each configured repo
-	for _, repo := range cfg.Repos {
-		if _, err := os.Stat(repo.Path); os.IsNotExist(err) {
-			if !syncQuiet {
-				fmt.Fprintf(os.Stderr, "warning: repo path %q not found, skipping\n", repo.Path)
-			}
-			continue
-		}
-
-		// Import commits
-		commits, err := git.ScanCommits(repo.Path, repo.Name, date)
-		if err != nil {
-			if !syncQuiet {
-				fmt.Fprintf(os.Stderr, "warning: scanning commits in %q: %v\n", repo.Name, err)
-			}
-		} else {
-			entry.Commits = mergeCommits(entry.Commits, commits)
-		}
-
-		// Determine GitHub slug
-		ownerRepo := repo.GitHubSlug
-		if ownerRepo == "" {
-			ownerRepo, _ = git.GetOriginSlug(repo.Path)
-		}
-
-		// Import PRs (if we have a GitHub slug)
-		if ownerRepo != "" {
-			prs, err := git.FetchPRs(ownerRepo, repo.Name, cfg.GitHub.Token, date)
-			if err != nil {
-				if !syncQuiet {
-					fmt.Fprintf(os.Stderr, "warning: fetching PRs for %q: %v\n", repo.Name, err)
-				}
-			} else {
-				entry.PRs = mergePRs(entry.PRs, prs)
-			}
-		}
-	}
-
-	// Save the updated entry
-	if err := st.Save(entry); err != nil {
-		return fmt.Errorf("saving day file: %w", err)
-	}
-
-	// Output
 	if !syncQuiet {
+		st, err := store.New(cfg.Journal.Dir)
+		if err != nil {
+			return err
+		}
+		entry, err := st.LoadOrCreate(date)
+		if err != nil {
+			return err
+		}
 		if globalJSON {
 			out, err := render.ShowJSON(entry)
 			if err != nil {
