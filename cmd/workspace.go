@@ -26,10 +26,15 @@ var workspaceAddCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err := addWorkspaceToConfig(config.DefaultPath(), abs); err != nil {
+		added, err := addWorkspaceToConfig(config.DefaultPath(), abs)
+		if err != nil {
 			return err
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Workspace added: %s\n", abs)
+		if added {
+			fmt.Fprintf(cmd.OutOrStdout(), "Workspace added: %s\n", abs)
+		} else {
+			fmt.Fprintf(cmd.OutOrStdout(), "Workspace already registered: %s\n", abs)
+		}
 		return nil
 	},
 }
@@ -56,10 +61,15 @@ var workspaceExcludeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err := excludeRepoFromWorkspace(config.DefaultPath(), abs); err != nil {
+		excluded, err := excludeRepoFromWorkspace(config.DefaultPath(), abs)
+		if err != nil {
 			return err
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Excluded: %s\n", abs)
+		if excluded {
+			fmt.Fprintf(cmd.OutOrStdout(), "Excluded: %s\n", abs)
+		} else {
+			fmt.Fprintf(cmd.OutOrStdout(), "Already excluded: %s\n", abs)
+		}
 		return nil
 	},
 }
@@ -70,42 +80,44 @@ func init() {
 }
 
 // addWorkspaceToConfig loads config at cfgPath, appends ws if not present, writes back.
-func addWorkspaceToConfig(cfgPath, wsPath string) error {
+// Returns true if a new workspace was added, false if it was already registered.
+func addWorkspaceToConfig(cfgPath, wsPath string) (bool, error) {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for _, ws := range cfg.Workspaces {
 		if ws.Path == wsPath {
-			return nil // already registered
+			return false, nil
 		}
 	}
 	cfg.Workspaces = append(cfg.Workspaces, config.WorkspaceConfig{
 		Path: wsPath,
 		Name: filepath.Base(wsPath),
 	})
-	return cfg.Write(cfgPath)
+	return true, cfg.Write(cfgPath)
 }
 
 // excludeRepoFromWorkspace finds the workspace that owns repoPath (by path prefix)
 // and adds repoPath to its exclude list.
-func excludeRepoFromWorkspace(cfgPath, repoPath string) error {
+// Returns true if the exclude entry was added, false if it was already present.
+func excludeRepoFromWorkspace(cfgPath, repoPath string) (bool, error) {
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for i, ws := range cfg.Workspaces {
 		if strings.HasPrefix(repoPath, ws.Path+string(os.PathSeparator)) {
 			for _, e := range ws.Exclude {
 				if e == repoPath {
-					return nil // already excluded
+					return false, nil
 				}
 			}
 			cfg.Workspaces[i].Exclude = append(cfg.Workspaces[i].Exclude, repoPath)
-			return cfg.Write(cfgPath)
+			return true, cfg.Write(cfgPath)
 		}
 	}
-	return fmt.Errorf("no workspace found for repo %q — register the parent directory first with 'devlog workspace add'", repoPath)
+	return false, fmt.Errorf("no workspace found for repo %q — register the parent directory first with 'devlog workspace add'", repoPath)
 }
 
 // printWorkspaceList writes a human-readable summary of workspaces and discovered repos to w.
@@ -118,15 +130,15 @@ func printWorkspaceList(cfg *config.Config, w io.Writer) error {
 		fmt.Fprintf(w, "workspace: %s (%s)\n", ws.Name, ws.Path)
 		repos, err := config.DiscoverRepos(ws.Path, ws.Exclude)
 		if err != nil {
-			fmt.Fprintf(w, "  error scanning: %v\n", err)
+			fmt.Fprintf(os.Stderr, "warning: scanning workspace %q: %v\n", ws.Name, err)
 			continue
 		}
 		if len(repos) == 0 {
 			fmt.Fprintln(w, "  (no git repos found)")
-			continue
-		}
-		for _, r := range repos {
-			fmt.Fprintf(w, "  - %s (%s)\n", r.Name, r.Path)
+		} else {
+			for _, r := range repos {
+				fmt.Fprintf(w, "  - %s (%s)\n", r.Name, r.Path)
+			}
 		}
 		if len(ws.Exclude) > 0 {
 			fmt.Fprintln(w, "  excluded:")
