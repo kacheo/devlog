@@ -176,8 +176,13 @@ func Serialize(e *DayEntry) ([]byte, error) {
 	} else {
 		b.WriteString("prs:\n")
 		for _, pr := range prs {
-			fmt.Fprintf(&b, "  - {number: %d, title: %q, state: %s, repo: %s, url: %s}\n",
-				pr.Number, pr.Title, pr.State, pr.Repo, pr.URL)
+			if pr.URL != "" {
+				fmt.Fprintf(&b, "  - {number: %d, title: %q, state: %s, repo: %s, url: %s}\n",
+					pr.Number, pr.Title, pr.State, pr.Repo, pr.URL)
+			} else {
+				fmt.Fprintf(&b, "  - {number: %d, title: %q, state: %s, repo: %s}\n",
+					pr.Number, pr.Title, pr.State, pr.Repo)
+			}
 		}
 	}
 

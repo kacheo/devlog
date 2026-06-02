@@ -52,8 +52,14 @@ func TestParse_Frontmatter(t *testing.T) {
 	if entry.Commits[0].Repo != "api-server" {
 		t.Errorf("Commits[0].Repo = %q", entry.Commits[0].Repo)
 	}
+	if entry.Commits[0].RepoSlug != "" {
+		t.Errorf("Commits[0].RepoSlug = %q, want empty (old format has no repo_slug)", entry.Commits[0].RepoSlug)
+	}
 	if len(entry.PRs) != 1 || entry.PRs[0].Number != 142 {
 		t.Errorf("PRs = %+v", entry.PRs)
+	}
+	if entry.PRs[0].URL != "" {
+		t.Errorf("PRs[0].URL = %q, want empty (old format has no url)", entry.PRs[0].URL)
 	}
 }
 
@@ -246,5 +252,44 @@ func TestSerialize_PreservesNotesOrder(t *testing.T) {
 	notes := entry2.Sections["notes"]
 	if len(notes) != 3 || notes[0] != "first" || notes[2] != "third" {
 		t.Errorf("notes order not preserved: %v", notes)
+	}
+}
+
+func TestSerialize_CommitsWithRepoSlug(t *testing.T) {
+	date := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
+	entry := EmptyEntry(date)
+	entry.Commits = []Commit{{SHA: "abc1234", Message: "fix: auth", Repo: "api-server", RepoSlug: "kacheo/api-server"}}
+	out, err := Serialize(entry)
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+	if !bytes.Contains(out, []byte("repo_slug: kacheo/api-server")) {
+		t.Errorf("frontmatter missing repo_slug field.\nGot:\n%s", out)
+	}
+}
+
+func TestSerialize_PRWithURL(t *testing.T) {
+	date := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
+	entry := EmptyEntry(date)
+	entry.PRs = []PR{{Number: 142, Title: "Add rate limiter", State: "merged", Repo: "api-server", URL: "https://github.com/kacheo/api-server/pull/142"}}
+	out, err := Serialize(entry)
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+	if !bytes.Contains(out, []byte("url: https://github.com/kacheo/api-server/pull/142")) {
+		t.Errorf("frontmatter missing url field.\nGot:\n%s", out)
+	}
+}
+
+func TestSerialize_PROMitsEmptyURL(t *testing.T) {
+	date := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
+	entry := EmptyEntry(date)
+	entry.PRs = []PR{{Number: 142, Title: "Add rate limiter", State: "merged", Repo: "api-server", URL: ""}}
+	out, err := Serialize(entry)
+	if err != nil {
+		t.Fatalf("Serialize() error = %v", err)
+	}
+	if bytes.Contains(out, []byte("url:")) {
+		t.Errorf("frontmatter should omit empty url field.\nGot:\n%s", out)
 	}
 }
