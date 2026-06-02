@@ -227,3 +227,35 @@ func TestResolvedEditor(t *testing.T) {
 		})
 	}
 }
+
+func TestLoad_WorkspaceConfig(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.toml")
+	content := `
+[[workspaces]]
+path = "~/projects"
+name  = "main"
+exclude = ["~/projects/dotfiles"]
+`
+	if err := os.WriteFile(cfgPath, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(cfgPath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.Workspaces) != 1 {
+		t.Fatalf("expected 1 workspace, got %d", len(cfg.Workspaces))
+	}
+	ws := cfg.Workspaces[0]
+	home, _ := os.UserHomeDir()
+	if ws.Path != filepath.Join(home, "projects") {
+		t.Errorf("expected expanded path, got %q", ws.Path)
+	}
+	if ws.Name != "main" {
+		t.Errorf("expected name 'main', got %q", ws.Name)
+	}
+	if len(ws.Exclude) != 1 || ws.Exclude[0] != filepath.Join(home, "projects/dotfiles") {
+		t.Errorf("unexpected exclude: %v", ws.Exclude)
+	}
+}
