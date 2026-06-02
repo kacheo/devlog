@@ -346,7 +346,7 @@ func TestActionItems_RoundTrip(t *testing.T) {
 }
 
 func TestNormalizeSection_ActionItems(t *testing.T) {
-	cases := []string{"action", "action_item", "action_items", "Action Items"}
+	cases := []string{"action", "action_item", "action_items", "action items", "Action Items"}
 	for _, c := range cases {
 		got, ok := NormalizeSection(c)
 		if !ok || got != "action_items" {
