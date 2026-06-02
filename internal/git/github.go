@@ -105,7 +105,7 @@ func fetchPRsViaREST(ownerRepo, repoName, token string, targetDate time.Time) ([
 	if err != nil {
 		return nil, fmt.Errorf("GitHub REST API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // defensive: close error not actionable
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -142,7 +142,7 @@ func getGitHubLogin(token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // defensive: close error not actionable
 	body, _ := io.ReadAll(resp.Body)
 	var u struct {
 		Login string `json:"login"`

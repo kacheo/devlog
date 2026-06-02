@@ -66,8 +66,8 @@ func (s *Store) Save(entry *DayEntry) error {
 		return fmt.Errorf("opening lock file: %w", err)
 	}
 	defer func() {
-		lf.Close()
-		os.Remove(lockPath)
+		_ = lf.Close()
+		_ = os.Remove(lockPath)
 	}()
 
 	if err := syscall.Flock(int(lf.Fd()), syscall.LOCK_EX); err != nil {
@@ -85,7 +85,7 @@ func (s *Store) Save(entry *DayEntry) error {
 		return fmt.Errorf("writing temp file: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
 	return nil
