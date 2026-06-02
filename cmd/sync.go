@@ -32,53 +32,52 @@ func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) (*store.D
 	if err != nil {
 		return nil, fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
 	}
-	entry, err := st.LoadOrCreate(date)
-	if err != nil {
-		return nil, fmt.Errorf("loading day file: %w", err)
-	}
 
 	repos, err := cfg.EffectiveRepos()
 	if err != nil && !quiet {
 		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
 	}
 
-	for _, repo := range repos {
-		if _, err := os.Stat(repo.Path); os.IsNotExist(err) {
-			if !quiet {
-				fmt.Fprintf(os.Stderr, "warning: repo path %q not found, skipping\n", repo.Path)
+	var result *store.DayEntry
+	if err := st.Modify(date, func(entry *store.DayEntry) error {
+		for _, repo := range repos {
+			if _, err := os.Stat(repo.Path); os.IsNotExist(err) {
+				if !quiet {
+					fmt.Fprintf(os.Stderr, "warning: repo path %q not found, skipping\n", repo.Path)
+				}
+				continue
 			}
-			continue
-		}
 
-		commits, err := git.ScanCommits(repo.Path, repo.Name, date)
-		if err != nil {
-			if !quiet {
-				fmt.Fprintf(os.Stderr, "warning: scanning commits in %q: %v\n", repo.Name, err)
-			}
-		} else {
-			entry.Commits = mergeCommits(entry.Commits, commits)
-		}
-
-		ownerRepo := repo.GitHubSlug
-		if ownerRepo == "" {
-			ownerRepo, _ = git.GetOriginSlug(repo.Path)
-		}
-		if ownerRepo != "" {
-			prs, err := git.FetchPRs(ownerRepo, repo.Name, cfg.GitHub.Token, date)
+			commits, err := git.ScanCommits(repo.Path, repo.Name, date)
 			if err != nil {
 				if !quiet {
-					fmt.Fprintf(os.Stderr, "warning: fetching PRs for %q: %v\n", repo.Name, err)
+					fmt.Fprintf(os.Stderr, "warning: scanning commits in %q: %v\n", repo.Name, err)
 				}
 			} else {
-				entry.PRs = mergePRs(entry.PRs, prs)
+				entry.Commits = mergeCommits(entry.Commits, commits)
+			}
+
+			ownerRepo := repo.GitHubSlug
+			if ownerRepo == "" {
+				ownerRepo, _ = git.GetOriginSlug(repo.Path)
+			}
+			if ownerRepo != "" {
+				prs, err := git.FetchPRs(ownerRepo, repo.Name, cfg.GitHub.Token, date)
+				if err != nil {
+					if !quiet {
+						fmt.Fprintf(os.Stderr, "warning: fetching PRs for %q: %v\n", repo.Name, err)
+					}
+				} else {
+					entry.PRs = mergePRs(entry.PRs, prs)
+				}
 			}
 		}
-	}
-
-	if err := st.Save(entry); err != nil {
+		result = entry
+		return nil
+	}); err != nil {
 		return nil, err
 	}
-	return entry, nil
+	return result, nil
 }
 
 func runSync(cmd *cobra.Command, args []string) error {
