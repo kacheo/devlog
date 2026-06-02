@@ -76,7 +76,7 @@ func runStandup(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(w, string(out)) //nolint:errcheck
+		fmt.Fprintln(w, string(out))
 		return nil
 	}
 

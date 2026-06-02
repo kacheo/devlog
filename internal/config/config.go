@@ -12,9 +12,10 @@ import (
 
 // Config is the top-level configuration structure.
 type Config struct {
-	Journal JournalConfig `toml:"journal"`
-	GitHub  GitHubConfig  `toml:"github"`
-	Repos   []RepoConfig  `toml:"repos"`
+	Journal    JournalConfig     `toml:"journal"`
+	GitHub     GitHubConfig      `toml:"github"`
+	Repos      []RepoConfig      `toml:"repos"`
+	Workspaces []WorkspaceConfig `toml:"workspaces"`
 }
 
 // JournalConfig holds journal directory and editor settings.
@@ -33,6 +34,13 @@ type RepoConfig struct {
 	Path       string `toml:"path"`
 	Name       string `toml:"name"`
 	GitHubSlug string `toml:"github_slug"`
+}
+
+// WorkspaceConfig represents a directory auto-scanned for git repos.
+type WorkspaceConfig struct {
+	Path    string   `toml:"path"`
+	Name    string   `toml:"name"`
+	Exclude []string `toml:"exclude"`
 }
 
 // DefaultPath returns the canonical config file path (~/.config/devlog/config.toml).
@@ -61,9 +69,15 @@ func Load(path string) (*Config, error) {
 	}
 
 	// Tilde expansion
-	cfg.Journal.Dir = expandHome(cfg.Journal.Dir)
+	cfg.Journal.Dir = ExpandHome(cfg.Journal.Dir)
 	for i := range cfg.Repos {
-		cfg.Repos[i].Path = expandHome(cfg.Repos[i].Path)
+		cfg.Repos[i].Path = ExpandHome(cfg.Repos[i].Path)
+	}
+	for i := range cfg.Workspaces {
+		cfg.Workspaces[i].Path = ExpandHome(cfg.Workspaces[i].Path)
+		for j := range cfg.Workspaces[i].Exclude {
+			cfg.Workspaces[i].Exclude[j] = ExpandHome(cfg.Workspaces[i].Exclude[j])
+		}
 	}
 
 	// Environment variable overrides (applied after tilde expansion)
@@ -122,8 +136,8 @@ func (c *Config) Write(path string) error {
 	return nil
 }
 
-// expandHome replaces a leading ~ with the user home directory.
-func expandHome(path string) string {
+// ExpandHome replaces a leading ~ with the user home directory.
+func ExpandHome(path string) string {
 	if !strings.HasPrefix(path, "~") {
 		return path
 	}
