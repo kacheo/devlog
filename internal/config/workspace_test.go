@@ -20,7 +20,9 @@ func TestDiscoverRepos_FindsGitDirs(t *testing.T) {
 	repoA := makeGitRepo(t, ws, "repo-a")
 	repoB := makeGitRepo(t, ws, "repo-b")
 	// non-git dir
-	os.MkdirAll(filepath.Join(ws, "not-a-repo"), 0755)
+	if err := os.MkdirAll(filepath.Join(ws, "not-a-repo"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	repos, err := DiscoverRepos(ws, nil)
 	if err != nil {

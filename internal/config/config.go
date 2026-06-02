@@ -69,14 +69,14 @@ func Load(path string) (*Config, error) {
 	}
 
 	// Tilde expansion
-	cfg.Journal.Dir = expandHome(cfg.Journal.Dir)
+	cfg.Journal.Dir = ExpandHome(cfg.Journal.Dir)
 	for i := range cfg.Repos {
-		cfg.Repos[i].Path = expandHome(cfg.Repos[i].Path)
+		cfg.Repos[i].Path = ExpandHome(cfg.Repos[i].Path)
 	}
 	for i := range cfg.Workspaces {
-		cfg.Workspaces[i].Path = expandHome(cfg.Workspaces[i].Path)
+		cfg.Workspaces[i].Path = ExpandHome(cfg.Workspaces[i].Path)
 		for j := range cfg.Workspaces[i].Exclude {
-			cfg.Workspaces[i].Exclude[j] = expandHome(cfg.Workspaces[i].Exclude[j])
+			cfg.Workspaces[i].Exclude[j] = ExpandHome(cfg.Workspaces[i].Exclude[j])
 		}
 	}
 
@@ -136,8 +136,8 @@ func (c *Config) Write(path string) error {
 	return nil
 }
 
-// expandHome replaces a leading ~ with the user home directory.
-func expandHome(path string) string {
+// ExpandHome replaces a leading ~ with the user home directory.
+func ExpandHome(path string) string {
 	if !strings.HasPrefix(path, "~") {
 		return path
 	}

@@ -70,8 +70,8 @@ func runInitInteractive(cmd *cobra.Command, cfg *config.Config, cfgPath string) 
 	w := cmd.OutOrStdout()
 	r := bufio.NewReader(os.Stdin)
 
-	fmt.Fprintln(w, "devlog setup") //nolint:errcheck // CLI output - write failure not actionable
-	fmt.Fprintln(w, "------------") //nolint:errcheck
+	fmt.Fprintln(w, "devlog setup")
+	fmt.Fprintln(w, "------------")
 
 	// Journal dir
 	home, _ := os.UserHomeDir()
@@ -79,7 +79,7 @@ func runInitInteractive(cmd *cobra.Command, cfg *config.Config, cfgPath string) 
 	if defaultDir == "" {
 		defaultDir = filepath.Join(home, "devlog")
 	}
-	fmt.Fprintf(w, "Journal directory [%s]: ", defaultDir) //nolint:errcheck
+	fmt.Fprintf(w, "Journal directory [%s]: ", defaultDir)
 	line, _ := r.ReadString('\n')
 	line = strings.TrimSpace(line)
 	if line != "" {
@@ -89,7 +89,7 @@ func runInitInteractive(cmd *cobra.Command, cfg *config.Config, cfgPath string) 
 	}
 
 	// GitHub token
-	fmt.Fprintf(w, "GitHub token (optional, press Enter to skip): ") //nolint:errcheck
+	fmt.Fprintf(w, "GitHub token (optional, press Enter to skip): ")
 	line, _ = r.ReadString('\n')
 	line = strings.TrimSpace(line)
 	if line != "" {
@@ -105,20 +105,24 @@ func runInitInteractive(cmd *cobra.Command, cfg *config.Config, cfgPath string) 
 	if err := cfg.Write(cfgPath); err != nil {
 		return fmt.Errorf("writing config: %w", err)
 	}
-	fmt.Fprintf(w, "Config written to %s\n", cfgPath) //nolint:errcheck
+	fmt.Fprintf(w, "Config written to %s\n", cfgPath)
 
 	// Offer hook installation for each effective repo (explicit + workspace-discovered)
-	allRepos, _ := cfg.EffectiveRepos()
+	allRepos, err := cfg.EffectiveRepos()
+	if err != nil {
+		fmt.Fprintf(w, "warning: discovering workspace repos: %v\n", err)
+		allRepos = cfg.Repos
+	}
 	for _, repo := range allRepos {
 		hookPath := filepath.Join(repo.Path, ".git", "hooks", "post-commit")
-		fmt.Fprintf(w, "Install post-commit hook in %s? [y/N]: ", repo.Name) //nolint:errcheck
+		fmt.Fprintf(w, "Install post-commit hook in %s? [y/N]: ", repo.Name)
 		line, _ = r.ReadString('\n')
 		line = strings.TrimSpace(strings.ToLower(line))
 		if line == "y" || line == "yes" {
 			if err := installHook(hookPath); err != nil {
-				fmt.Fprintf(w, "warning: could not install hook for %s: %v\n", repo.Name, err) //nolint:errcheck
+				fmt.Fprintf(w, "warning: could not install hook for %s: %v\n", repo.Name, err)
 			} else {
-				fmt.Fprintf(w, "Hook installed at %s\n", hookPath) //nolint:errcheck
+				fmt.Fprintf(w, "Hook installed at %s\n", hookPath)
 			}
 		}
 	}

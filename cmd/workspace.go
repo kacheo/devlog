@@ -22,7 +22,7 @@ var workspaceAddCmd = &cobra.Command{
 	Short: "Register a workspace directory",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		abs, err := filepath.Abs(expandTilde(args[0]))
+		abs, err := filepath.Abs(config.ExpandHome(args[0]))
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ var workspaceExcludeCmd = &cobra.Command{
 	Short: "Exclude a repo path from its parent workspace",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		abs, err := filepath.Abs(expandTilde(args[0]))
+		abs, err := filepath.Abs(config.ExpandHome(args[0]))
 		if err != nil {
 			return err
 		}
@@ -118,15 +118,6 @@ func excludeRepoFromWorkspace(cfgPath, repoPath string) (bool, error) {
 		}
 	}
 	return false, fmt.Errorf("no workspace found for repo %q — register the parent directory first with 'devlog workspace add'", repoPath)
-}
-
-// expandTilde replaces a leading ~ with the user's home directory.
-func expandTilde(path string) string {
-	if !strings.HasPrefix(path, "~") {
-		return path
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, path[1:])
 }
 
 // printWorkspaceList writes a human-readable summary of workspaces and discovered repos to w.

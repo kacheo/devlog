@@ -102,8 +102,12 @@ func TestWorkspaceExclude_ErrorWhenNoWorkspaceFound(t *testing.T) {
 
 func TestWorkspaceList_PrintsDiscoveredRepos(t *testing.T) {
 	wsDir := t.TempDir()
-	os.MkdirAll(filepath.Join(wsDir, "svc-a", ".git"), 0755)
-	os.MkdirAll(filepath.Join(wsDir, "svc-b", ".git"), 0755)
+	if err := os.MkdirAll(filepath.Join(wsDir, "svc-a", ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(wsDir, "svc-b", ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg := &config.Config{
 		Journal: config.JournalConfig{Dir: t.TempDir()},
@@ -126,7 +130,9 @@ func TestWorkspaceList_PrintsDiscoveredRepos(t *testing.T) {
 func TestWorkspaceList_ShowsExcludeListWhenAllReposExcluded(t *testing.T) {
 	wsDir := t.TempDir()
 	repoPath := filepath.Join(wsDir, "the-repo")
-	os.MkdirAll(filepath.Join(repoPath, ".git"), 0755)
+	if err := os.MkdirAll(filepath.Join(repoPath, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg := &config.Config{
 		Workspaces: []config.WorkspaceConfig{
