@@ -32,7 +32,7 @@ func TestEditCmd_CreatesFileIfMissing(t *testing.T) {
 
 	// File should not exist yet
 	if _, err := os.Stat(expectedPath); err == nil {
-		os.Remove(expectedPath)
+		_ = os.Remove(expectedPath)
 	}
 
 	rootCmd.SetArgs([]string{"edit"})

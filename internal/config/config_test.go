@@ -178,7 +178,7 @@ func TestWrite_AtomicNoPanicOnError(t *testing.T) {
 	if err := os.Chmod(dir, 0500); err != nil {
 		t.Skip("cannot set dir read-only")
 	}
-	t.Cleanup(func() { os.Chmod(dir, 0700) })
+	t.Cleanup(func() { _ = os.Chmod(dir, 0700) })
 	path := filepath.Join(dir, "sub", "config.toml")
 	err := cfg.Write(path)
 	if err == nil {
