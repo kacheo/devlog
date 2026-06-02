@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -143,5 +144,20 @@ func TestEffectiveRepos_ExcludesHonored(t *testing.T) {
 	}
 	if repos[0].Name != "keep" {
 		t.Errorf("wrong repo kept: %+v", repos[0])
+	}
+}
+
+func TestEffectiveRepos_WorkspaceErrorWrapsName(t *testing.T) {
+	cfg := &Config{
+		Workspaces: []WorkspaceConfig{
+			{Path: "/nonexistent-workspace-path", Name: "broken-ws"},
+		},
+	}
+	_, err := cfg.EffectiveRepos()
+	if err == nil {
+		t.Fatal("expected error for non-existent workspace path")
+	}
+	if !strings.Contains(err.Error(), "broken-ws") {
+		t.Errorf("error should contain workspace name, got: %v", err)
 	}
 }
