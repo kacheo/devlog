@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseGHPROutput(t *testing.T) {
-	input := `[{"number":142,"title":"Add rate limiter","state":"merged","updatedAt":"2026-06-01T14:00:00Z"},{"number":143,"title":"Fix auth","state":"open","updatedAt":"2026-06-02T09:00:00Z"}]`
+	input := `[{"number":142,"title":"Add rate limiter","state":"merged","updatedAt":"2026-06-01T14:00:00Z","url":"https://github.com/kacheo/api-server/pull/142"},{"number":143,"title":"Fix auth","state":"open","updatedAt":"2026-06-02T09:00:00Z","url":"https://github.com/kacheo/api-server/pull/143"}]`
 	targetDay := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
 
 	prs, err := parseGHOutput(input, targetDay)
@@ -25,6 +25,9 @@ func TestParseGHPROutput(t *testing.T) {
 	if prs[0].State != "merged" {
 		t.Errorf("prs[0].State = %q", prs[0].State)
 	}
+	if prs[0].URL != "https://github.com/kacheo/api-server/pull/142" {
+		t.Errorf("prs[0].URL = %q, want https://github.com/kacheo/api-server/pull/142", prs[0].URL)
+	}
 }
 
 func TestParseGHPROutput_Empty(t *testing.T) {
@@ -38,8 +41,8 @@ func TestParseGHPROutput_Empty(t *testing.T) {
 }
 
 func TestParseRESTOutput(t *testing.T) {
-	// REST API format uses updated_at and user.login
-	input := `[{"number":142,"title":"Add rate limiter","state":"open","updated_at":"2026-06-01T14:00:00Z","user":{"login":"testuser"}},{"number":143,"title":"Fix auth","state":"closed","updated_at":"2026-06-02T09:00:00Z","user":{"login":"testuser"}}]`
+	// REST API format uses updated_at, user.login, and html_url
+	input := `[{"number":142,"title":"Add rate limiter","state":"open","updated_at":"2026-06-01T14:00:00Z","html_url":"https://github.com/kacheo/api-server/pull/142","user":{"login":"testuser"}},{"number":143,"title":"Fix auth","state":"closed","updated_at":"2026-06-02T09:00:00Z","html_url":"https://github.com/kacheo/api-server/pull/143","user":{"login":"testuser"}}]`
 	targetDay := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
 	authorLogin := "testuser"
 
@@ -52,6 +55,9 @@ func TestParseRESTOutput(t *testing.T) {
 	}
 	if prs[0].Number != 142 {
 		t.Errorf("prs[0].Number = %d, want 142", prs[0].Number)
+	}
+	if prs[0].URL != "https://github.com/kacheo/api-server/pull/142" {
+		t.Errorf("prs[0].URL = %q, want https://github.com/kacheo/api-server/pull/142", prs[0].URL)
 	}
 }
 

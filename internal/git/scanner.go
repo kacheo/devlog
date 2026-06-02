@@ -37,6 +37,7 @@ func ScanCommits(repoPath, repoName string, targetDate time.Time) ([]store.Commi
 		return nil, fmt.Errorf("running git log in %s: %w", repoPath, err)
 	}
 
+	slug, _ := GetOriginSlug(repoPath)
 	var commits []store.Commit
 	for _, line := range strings.Split(string(bytes.TrimSpace(out)), "\n") {
 		if line == "" {
@@ -46,7 +47,9 @@ func ScanCommits(repoPath, repoName string, targetDate time.Time) ([]store.Commi
 		if !ok {
 			continue
 		}
-		commits = append(commits, store.Commit{SHA: sha, Message: msg, Repo: repoName})
+		commits = append(commits, store.Commit{
+			SHA: sha, Message: msg, Repo: repoName, RepoSlug: slug,
+		})
 	}
 	return commits, nil
 }
