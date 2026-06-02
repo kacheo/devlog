@@ -18,6 +18,7 @@ var (
 var rmCmd = &cobra.Command{
 	Use:   "rm",
 	Short: "Remove a bullet from a section by its 1-based index",
+	Args:  cobra.NoArgs,
 	RunE:  runRm,
 }
 

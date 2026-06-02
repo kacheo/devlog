@@ -16,7 +16,7 @@ var (
 )
 
 var updateCmd = &cobra.Command{
-	Use:   "update \"new text\"",
+	Use:   "update --id <n> \"new text\"",
 	Short: "Replace a bullet in a section by its 1-based index",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runUpdate,
