@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/kacheo/devlog/internal/config"
 	"github.com/kacheo/devlog/internal/store"
 )
 
@@ -75,5 +78,27 @@ func TestSyncCmd_SkipsMissingRepo(t *testing.T) {
 	_, err := os.Stat("/nonexistent/devlog/repo/path")
 	if !os.IsNotExist(err) {
 		t.Skip("expected /nonexistent path to not exist")
+	}
+}
+
+func TestSyncCmd_PicksUpWorkspaceRepo(t *testing.T) {
+	wsDir := t.TempDir()
+	repoDir := filepath.Join(wsDir, "ws-repo")
+	if err := os.MkdirAll(filepath.Join(repoDir, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := exec.Command("git", "-C", repoDir, "init").Run(); err != nil {
+		t.Skip("git not available")
+	}
+
+	cfg := &config.Config{
+		Journal: config.JournalConfig{Dir: t.TempDir()},
+		Workspaces: []config.WorkspaceConfig{
+			{Path: wsDir, Name: "test-ws"},
+		},
+	}
+	err := runSyncWithConfig(cfg, time.Now(), false)
+	if err != nil {
+		t.Fatalf("sync failed: %v", err)
 	}
 }
