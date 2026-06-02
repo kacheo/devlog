@@ -95,6 +95,29 @@ func (c *Config) ResolvedEditor() string {
 	return "vi"
 }
 
+// Write serializes the config to TOML at path, creating parent directories as needed.
+// Uses atomic write (write to temp file, then rename) to avoid partial writes.
+func (c *Config) Write(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("creating config directory: %w", err)
+	}
+	tmp := path + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		return fmt.Errorf("creating temp config: %w", err)
+	}
+	if err := toml.NewEncoder(f).Encode(c); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return fmt.Errorf("encoding config: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return fmt.Errorf("closing temp config: %w", err)
+	}
+	return os.Rename(tmp, path)
+}
+
 // expandHome replaces a leading ~ with the user home directory.
 func expandHome(path string) string {
 	if !strings.HasPrefix(path, "~") {

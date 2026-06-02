@@ -127,6 +127,65 @@ func TestConfig_JournalDirExpanded(t *testing.T) {
 	}
 }
 
+func TestWrite_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+
+	cfg := &Config{
+		Journal: JournalConfig{Dir: "~/devlog"},
+		GitHub:  GitHubConfig{Token: "ghp_abc"},
+		Repos: []RepoConfig{
+			{Path: "~/workspace/api", Name: "api"},
+		},
+	}
+	if err := cfg.Write(path); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+
+	got, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load() after Write() error = %v", err)
+	}
+	// Dir is tilde-expanded on Load, so compare expanded form
+	home, _ := os.UserHomeDir()
+	wantDir := filepath.Join(home, "devlog")
+	if got.Journal.Dir != wantDir {
+		t.Errorf("Journal.Dir = %q, want %q", got.Journal.Dir, wantDir)
+	}
+	if len(got.Repos) != 1 || got.Repos[0].Name != "api" {
+		t.Errorf("Repos mismatch: %+v", got.Repos)
+	}
+}
+
+func TestWrite_CreatesParentDirs(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "subdir", "config.toml")
+	cfg := &Config{Journal: JournalConfig{Dir: "/tmp"}}
+	if err := cfg.Write(path); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Errorf("config file not created: %v", err)
+	}
+}
+
+func TestWrite_AtomicNoPanicOnError(t *testing.T) {
+	// Writing to a path whose parent doesn't exist should still error cleanly
+	cfg := &Config{Journal: JournalConfig{Dir: "/tmp"}}
+	// Write creates parent dirs, so use a read-only parent to force failure
+	// (Skip on systems where root can always write)
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0500); err != nil {
+		t.Skip("cannot set dir read-only")
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0700) })
+	path := filepath.Join(dir, "sub", "config.toml")
+	err := cfg.Write(path)
+	if err == nil {
+		t.Error("Write() to unwritable dir should error")
+	}
+}
+
 func TestResolvedEditor(t *testing.T) {
 	tests := []struct {
 		name         string
