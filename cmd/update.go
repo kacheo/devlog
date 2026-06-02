@@ -53,12 +53,16 @@ func runUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
 	}
 
-	return st.Modify(date, func(entry *store.DayEntry) error {
+	if err := st.Modify(date, func(entry *store.DayEntry) error {
 		bullets := entry.Sections[canonical]
 		if updateID < 1 || updateID > len(bullets) {
 			return fmt.Errorf("id %d out of range: section %q has %d item(s)", updateID, canonical, len(bullets))
 		}
 		entry.Sections[canonical][updateID-1] = text
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Updated [%d] in %s.\n", updateID, canonical)
+	return nil
 }
