@@ -97,7 +97,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), string(out))
+			fmt.Fprintln(cmd.OutOrStdout(), string(out)) //nolint:errcheck
 		} else {
 			render.ShowTerminal(entry, cmd.OutOrStdout())
 		}

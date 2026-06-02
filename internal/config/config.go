@@ -107,16 +107,16 @@ func (c *Config) Write(path string) error {
 		return fmt.Errorf("creating temp config: %w", err)
 	}
 	if err := toml.NewEncoder(f).Encode(c); err != nil {
-		f.Close()
-		os.Remove(tmp)
+		_ = f.Close()
+		_ = os.Remove(tmp)
 		return fmt.Errorf("encoding config: %w", err)
 	}
 	if err := f.Close(); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("closing temp config: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
+		_ = os.Remove(tmp)
 		return fmt.Errorf("renaming temp config: %w", err)
 	}
 	return nil
