@@ -102,7 +102,7 @@ func (c *Config) Write(path string) error {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
 	tmp := path + ".tmp"
-	f, err := os.Create(tmp)
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("creating temp config: %w", err)
 	}
@@ -115,7 +115,11 @@ func (c *Config) Write(path string) error {
 		os.Remove(tmp)
 		return fmt.Errorf("closing temp config: %w", err)
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		os.Remove(tmp)
+		return fmt.Errorf("renaming temp config: %w", err)
+	}
+	return nil
 }
 
 // expandHome replaces a leading ~ with the user home directory.
