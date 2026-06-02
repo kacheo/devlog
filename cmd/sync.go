@@ -27,19 +27,19 @@ func init() {
 	rootCmd.AddCommand(syncCmd)
 }
 
-func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) error {
+func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) (*store.DayEntry, error) {
 	st, err := store.New(cfg.Journal.Dir)
 	if err != nil {
-		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
+		return nil, fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
 	}
 	entry, err := st.LoadOrCreate(date)
 	if err != nil {
-		return fmt.Errorf("loading day file: %w", err)
+		return nil, fmt.Errorf("loading day file: %w", err)
 	}
 
 	repos, err := cfg.EffectiveRepos()
 	if err != nil {
-		return fmt.Errorf("resolving repos: %w", err)
+		return nil, fmt.Errorf("resolving repos: %w", err)
 	}
 
 	for _, repo := range repos {
@@ -75,7 +75,10 @@ func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) error {
 		}
 	}
 
-	return st.Save(entry)
+	if err := st.Save(entry); err != nil {
+		return nil, err
+	}
+	return entry, nil
 }
 
 func runSync(cmd *cobra.Command, args []string) error {
@@ -89,19 +92,12 @@ func runSync(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := runSyncWithConfig(cfg, date, syncQuiet); err != nil {
+	entry, err := runSyncWithConfig(cfg, date, syncQuiet)
+	if err != nil {
 		return err
 	}
 
 	if !syncQuiet {
-		st, err := store.New(cfg.Journal.Dir)
-		if err != nil {
-			return err
-		}
-		entry, err := st.LoadOrCreate(date)
-		if err != nil {
-			return err
-		}
 		if globalJSON {
 			out, err := render.ShowJSON(entry)
 			if err != nil {

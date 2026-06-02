@@ -88,7 +88,7 @@ func TestSyncCmd_PicksUpWorkspaceRepo(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := exec.Command("git", "-C", repoDir, "init").Run(); err != nil {
-		t.Skip("git not available")
+		t.Fatalf("git init failed: %v", err)
 	}
 
 	cfg := &config.Config{
@@ -97,7 +97,7 @@ func TestSyncCmd_PicksUpWorkspaceRepo(t *testing.T) {
 			{Path: wsDir, Name: "test-ws"},
 		},
 	}
-	err := runSyncWithConfig(cfg, time.Now(), false)
+	_, err := runSyncWithConfig(cfg, time.Now(), true)
 	if err != nil {
 		t.Fatalf("sync failed: %v", err)
 	}
