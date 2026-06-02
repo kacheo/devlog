@@ -68,12 +68,12 @@ func runShow(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(w, string(out))
+		fmt.Fprintln(w, string(out)) //nolint:errcheck
 		return nil
 	}
 
 	if entry == nil {
-		fmt.Fprintln(w, "(no entry)")
+		fmt.Fprintln(w, "(no entry)") //nolint:errcheck
 		return nil
 	}
 	render.ShowTerminal(entry, w)
@@ -101,18 +101,18 @@ func showWeek(st *store.Store, w io.Writer) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(w, string(out))
+		fmt.Fprintln(w, string(out)) //nolint:errcheck
 		return nil
 	}
 
 	if len(entries) == 0 {
-		fmt.Fprintln(w, "(no entries this week)")
+		fmt.Fprintln(w, "(no entries this week)") //nolint:errcheck
 		return nil
 	}
 	for _, entry := range entries {
-		fmt.Fprintf(w, "=== %s ===\n", entry.Date.Format("2006-01-02"))
+		fmt.Fprintf(w, "=== %s ===\n", entry.Date.Format("2006-01-02")) //nolint:errcheck
 		render.ShowTerminal(entry, w)
-		fmt.Fprintln(w)
+		fmt.Fprintln(w) //nolint:errcheck
 	}
 	return nil
 }
