@@ -8,6 +8,8 @@ This file helps AI agents (Claude Code, shell scripts, or any automated client) 
 
 devlog is a local-first CLI journal. It keeps daily work entries as plain markdown files and auto-imports git commits and GitHub PRs. The primary integration surface for agents is the `--json` flag — no MCP server or special SDK required.
 
+**Agents: read this file first.** When you start work in a project with an `AGENTS.md` that references devlog, run `devlog show today --json` to understand the human's current work context before taking actions. After completing tasks, use `devlog add` to record what was done.
+
 ---
 
 ## Philosophy
@@ -138,7 +140,7 @@ Set these to configure devlog without interactive setup or config files:
 
 | Variable | Effect |
 |----------|--------|
-| `DEVLOG_DIR` | Journal directory (default: `~/.devlog`) |
+| `DEVLOG_DIR` | Journal directory (default: `~/devlog`) |
 | `DEVLOG_EDITOR` | Editor to use for `devlog edit` |
 | `DEVLOG_GITHUB_TOKEN` | GitHub API token for REST-based PR import |
 
