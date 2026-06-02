@@ -55,16 +55,18 @@ func runStandup(cmd *cobra.Command, args []string) error {
 	var doneEntries []*store.DayEntry
 	for cursor := since; cursor.Before(until); cursor = cursor.AddDate(0, 0, 1) {
 		entry, err := st.Load(cursor)
-		if err != nil || entry == nil {
-			continue
+		if err != nil {
+			return fmt.Errorf("loading entry for %s: %w", cursor.Format("2006-01-02"), err)
 		}
-		doneEntries = append(doneEntries, entry)
+		if entry != nil {
+			doneEntries = append(doneEntries, entry)
+		}
 	}
 
-	// Today's entry for blockers/notes
+	// Today's entry for blockers/notes (missing today is fine)
 	todayEntry, err := st.Load(until)
 	if err != nil {
-		todayEntry = nil
+		return fmt.Errorf("loading today's entry: %w", err)
 	}
 
 	w := cmd.OutOrStdout()
