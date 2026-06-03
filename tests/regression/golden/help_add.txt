@@ -1,0 +1,13 @@
+Append a bullet to today's journal
+
+Usage:
+  devlog add "text" [flags]
+
+Flags:
+  -h, --help              help for add
+      --section string    section to append to (default: notes)
+      --tag stringArray   add a tag to today's frontmatter (repeatable)
+
+Global Flags:
+      --date string   target date (YYYY-MM-DD)
+      --json          emit structured JSON output
