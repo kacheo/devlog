@@ -2,7 +2,6 @@ package render
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/kacheo/devlog/internal/store"
 )
@@ -68,95 +67,6 @@ func toDayJSON(e *store.DayEntry) showDayJSON {
 	}
 }
 
-// standupDoneItem represents a commit or PR in the standup JSON output.
-type standupDoneItem struct {
-	Type    string `json:"type"`
-	SHA     string `json:"sha,omitempty"`
-	Message string `json:"message,omitempty"`
-	Number  int    `json:"number,omitempty"`
-	Title   string `json:"title,omitempty"`
-	State   string `json:"state,omitempty"`
-	Repo    string `json:"repo"`
-	Date    string `json:"date"`
-}
-
-type standupBlockerItem struct {
-	Text string `json:"text"`
-	Date string `json:"date"`
-}
-
-type standupNoteItem struct {
-	Text string `json:"text"`
-	Date string `json:"date"`
-}
-
-type standupPeriod struct {
-	Since string `json:"since"`
-	Until string `json:"until"`
-}
-
-type standupJSON struct {
-	Version     string               `json:"version"`
-	GeneratedAt string               `json:"generated_at"`
-	Period      standupPeriod        `json:"period"`
-	Done        []standupDoneItem    `json:"done"`
-	Blockers    []standupBlockerItem `json:"blockers"`
-	Notes       []standupNoteItem    `json:"notes"`
-}
-
-// StandupJSON builds the standup JSON output.
-// doneEntries: entries from the since period (for Done items).
-// todayEntry: today's entry (for Blockers and Notes); may be nil.
-func StandupJSON(since, until time.Time, doneEntries []*store.DayEntry, todayEntry *store.DayEntry) ([]byte, error) {
-	done := make([]standupDoneItem, 0)
-	for _, e := range doneEntries {
-		dateStr := e.Date.Format("2006-01-02")
-		for _, c := range e.Commits {
-			done = append(done, standupDoneItem{
-				Type:    "commit",
-				SHA:     c.SHA,
-				Message: c.Message,
-				Repo:    c.Repo,
-				Date:    dateStr,
-			})
-		}
-		for _, pr := range e.PRs {
-			done = append(done, standupDoneItem{
-				Type:   "pr",
-				Number: pr.Number,
-				Title:  pr.Title,
-				State:  pr.State,
-				Repo:   pr.Repo,
-				Date:   dateStr,
-			})
-		}
-	}
-
-	blockers := make([]standupBlockerItem, 0)
-	notes := make([]standupNoteItem, 0)
-	if todayEntry != nil {
-		dateStr := todayEntry.Date.Format("2006-01-02")
-		for _, b := range todayEntry.Sections["blockers"] {
-			blockers = append(blockers, standupBlockerItem{Text: b, Date: dateStr})
-		}
-		for _, n := range todayEntry.Sections["notes"] {
-			notes = append(notes, standupNoteItem{Text: n, Date: dateStr})
-		}
-	}
-
-	v := standupJSON{
-		Version:     "1",
-		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
-		Period: standupPeriod{
-			Since: since.Format("2006-01-02"),
-			Until: until.Format("2006-01-02"),
-		},
-		Done:     done,
-		Blockers: blockers,
-		Notes:    notes,
-	}
-	return json.Marshal(v)
-}
 
 func notNilStrings(s []string) []string {
 	if s == nil {

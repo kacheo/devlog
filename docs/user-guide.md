@@ -14,6 +14,7 @@ This guide covers the full command set, advanced filtering, workspace management
 - [AI Agent Integration](#ai-agent-integration)
 - [Troubleshooting](#troubleshooting)
 
+
 ---
 
 ## Full Command Reference
@@ -106,6 +107,8 @@ devlog show [today|yesterday|YYYY-MM-DD|week] [flags]
 
 | Flag | Description |
 |------|-------------|
+| `--from <date>` | Start of date range (inclusive) |
+| `--until <date>` | End of date range (inclusive), defaults to today when `--from` is set |
 | `--section <name>` | Render only these sections: `notes`, `blockers`, `action_items` (repeatable or comma-separated) |
 | `--tag <tag>` | Include only entries that have this tag |
 | `--repo <name>` | Include only entries with commits or PRs from this repo |
@@ -116,20 +119,23 @@ devlog show today
 devlog show week
 devlog show 2026-05-28
 
+# Date range (--until defaults to today)
+devlog show --from yesterday
+devlog show --from 2026-05-28 --until 2026-06-03
+
 # Show only blockers for this week
 devlog show week --section blockers
 
-# Show only entries tagged "backend"
-devlog show week --tag backend
-
-# Show only entries with activity in api-server
-devlog show week --repo api-server
+# Show only entries tagged "backend" in a range
+devlog show --from 2026-05-01 --tag backend
 
 # Combine filters and JSON output
-devlog show week --section notes --section action_items --json
+devlog show --from yesterday --section notes --section action_items --json
 ```
 
-`week` covers the last 7 days from today. `--date` is not compatible with `week` — use a specific date (e.g. `devlog show 2026-05-28`) to target a past day.
+`week` is a shorthand for the last 7 days (equivalent to `--from <6 days ago>`). `--date` is not compatible with `--from`/`--until` or with `week` — use a specific date (e.g. `devlog show 2026-05-28`) to target a single past day.
+
+When `--from` is used, `--json` output is a JSON array (one object per day). For a single day, `--json` returns a single object.
 
 ---
 
@@ -152,27 +158,6 @@ devlog sync --date 2026-05-30   # back-fill a specific date
 ```
 
 `sync` is idempotent — running it multiple times deduplicates by commit SHA and PR number. The post-commit hook runs `devlog sync --quiet` automatically when installed.
-
----
-
-### `standup`
-
-Compile done items (commits + PRs) and current blockers for a standup summary.
-
-```
-devlog standup [flags]
-```
-
-| Flag | Description |
-|------|-------------|
-| `--since <date>` | Collect done items from this date (default: yesterday) |
-| `--json` | Emit structured JSON |
-
-```bash
-devlog standup
-devlog standup --since 2026-05-28   # cross-weekend catch-up
-devlog standup --json               # for agent or script consumption
-```
 
 ---
 
@@ -411,7 +396,7 @@ devlog search "migration" --json
 ### Target a specific date with `--date`
 
 The global `--date` flag is honored by: `show`, `add`, `edit`, `rm`, `update`, and `sync`.
-It is **not** used by `search` (use `--from`/`--until` instead) or `standup` (use `--since`).
+It is **not** used by `search` (use `--from`/`--until` for date-bounded search).
 
 ```bash
 devlog show --date 2026-05-28
@@ -437,8 +422,8 @@ devlog add "Refactored auth middleware"
 # 3. Import git activity
 devlog sync --quiet
 
-# 4. Produce standup summary
-devlog standup --json
+# 4. Review recent activity as JSON
+devlog show --from yesterday --json
 ```
 
 ### `show --json` schema
@@ -458,23 +443,28 @@ devlog standup --json
 }
 ```
 
-### `standup --json` schema
+### `show --from DATE --json` schema (date range)
+
+Returns a JSON array — one element per matching day, each with the same shape as the single-day schema:
 
 ```json
-{
-  "version": "1",
-  "generated_at": "2026-06-02T09:00:00Z",
-  "period": { "since": "2026-06-01", "until": "2026-06-02" },
-  "done": [
-    { "type": "commit", "sha": "abc1234", "message": "fix: oauth token refresh", "repo": "api-server", "date": "2026-06-01" },
-    { "type": "pr", "number": 142, "title": "Add rate limiter", "state": "merged", "repo": "api-server", "date": "2026-06-01" }
-  ],
-  "blockers": [{ "text": "Waiting on DB provisioning", "date": "2026-06-01" }],
-  "notes":    [{ "text": "Refactored auth middleware", "date": "2026-06-01" }]
-}
+[
+  {
+    "version": "1",
+    "date": "2026-06-01",
+    "tags": ["auth"],
+    "sections": {
+      "notes":        ["Refactored auth middleware..."],
+      "blockers":     [],
+      "action_items": [],
+      "commits":      [{ "sha": "abc1234", "message": "fix: oauth token refresh", "repo": "api-server" }],
+      "prs":          [{ "number": 142, "title": "Add rate limiter", "state": "merged", "repo": "api-server" }]
+    }
+  }
+]
 ```
 
-> `show --json` uses string arrays for `notes` and `blockers`; `standup --json` uses objects with `text` and `date`. Check `version` before parsing; additive fields keep version `"1"`, breaking changes increment it.
+> Check `version` before parsing. Additive fields keep version `"1"`, breaking changes increment it.
 
 ### jq patterns
 
@@ -488,8 +478,11 @@ devlog show today --json | jq '[.sections.prs[] | select(.state == "merged")] | 
 # List all repos with commits today
 devlog show today --json | jq '[.sections.commits[].repo] | unique'
 
-# Get standup done items as plain text
-devlog standup --json | jq -r '.done[] | "\(.type): \(.message // .title) (\(.repo))"'
+# Flatten commits across a date range into a single list
+devlog show --from yesterday --json | jq '[.[].sections.commits[]]'
+
+# All merged PRs from the past week
+devlog show --from yesterday --json | jq '[.[].sections.prs[] | select(.state == "MERGED")]'
 
 # Search returns [{date, section, line}] — count matches per date
 devlog search "auth" --json | jq 'group_by(.date) | map({date: .[0].date, count: length})'

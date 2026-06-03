@@ -1,6 +1,6 @@
 # devlog
 
-**Local-first engineer journal — git commits and PRs auto-imported, standup-ready output.**
+**Local-first engineer journal — git commits and PRs auto-imported, date-range views and JSON output built in.**
 
 [![License](https://img.shields.io/github/license/kacheo/devlog)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kacheo/devlog)](https://goreportcard.com/report/github.com/kacheo/devlog)
@@ -8,16 +8,15 @@
 
 ```
 $ devlog add "Fixed the OAuth token refresh loop"
-$ devlog standup
---- Standup: Monday, June 1 ---
-
-Done (since 2026-06-01):
-  • fix: oauth token refresh loop  (api-server · abc1234)
-  • feat: add rate limiter to /v2/users  (api-server · def5678)
-  • PR #142 merged: Add rate limiter to user endpoints  (api-server)
-
-Blockers:
-  • (none)
+$ devlog show --from yesterday
+=== 2026-06-01 ===
+Notes:
+  [1] Fixed the OAuth token refresh loop
+Commits:
+  • abc1234  fix: oauth token refresh loop  (api-server)
+  • def5678  feat: add rate limiter to /v2/users  (api-server)
+PRs:
+  • PR #142 Add rate limiter to user endpoints [merged] (api-server)
 ```
 
 devlog keeps a structured daily journal as plain markdown files you can always open in your editor. Every command supports `--json` for AI agent integration — no MCP server required.
@@ -40,7 +39,7 @@ The binary lands in `~/go/bin`. Make sure that's on your `$PATH`. Prebuilt binar
 devlog init                                    # set up config and watched repos
 devlog add "Implemented rate limiter middleware"  # log what you're working on
 devlog show today                              # review your day
-devlog standup                                 # standup-ready output
+devlog show --from yesterday                   # review a date range
 devlog sync                                    # import today's commits and PRs
 ```
 
@@ -54,10 +53,10 @@ devlog sync                                    # import today's commits and PRs
 | `add "text" [--section SECTION] [--tag TAG]` | Append a bullet to today's notes or a named section |
 | `edit [DATE]` | Open a day file in `$EDITOR` |
 | `show [today\|yesterday\|YYYY-MM-DD\|week]` | Print entries for a day or the last 7 days |
+| `show --from DATE [--until DATE]` | Print entries for a date range (--until defaults to today) |
 | `sync [--quiet]` | Import today's commits and PRs from configured repos |
-| `standup [--since DATE]` | Compile done items + blockers for standup |
 
-**Global flags:** `--json` (structured output on `show`, `standup`, `sync`) · `--date YYYY-MM-DD` (target a specific date on `add`, `edit`, `show`, `sync`)
+**Global flags:** `--json` (structured output on `show`, `sync`) · `--date YYYY-MM-DD` (target a specific date on `add`, `edit`, `show`, `sync`)
 
 Unattended setup example:
 
@@ -170,7 +169,7 @@ For the complete command reference, advanced filtering, workspace management, an
 devlog show today --json          # read today's context before starting work
 devlog add "what was done"        # log completed tasks
 devlog sync --quiet               # import git activity
-devlog standup --json             # produce standup summary
+devlog show --from yesterday --json  # review recent activity as JSON
 ```
 
 ---

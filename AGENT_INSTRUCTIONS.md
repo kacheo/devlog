@@ -49,28 +49,30 @@ devlog show today --json
 # }
 ```
 
-### Generate standup summary
+### Review recent activity across a date range
 
 ```bash
-devlog standup --json
-# Returns:
-# {
-#   "version": "1",
-#   "generated_at": "2026-06-02T09:00:00Z",
-#   "period": { "since": "2026-06-01", "until": "2026-06-02" },
-#   "done": [
-#     { "type": "commit", "sha": "abc1234", "message": "fix: oauth token refresh loop", "repo": "api-server", "date": "2026-06-01" },
-#     { "type": "pr", "number": 142, "title": "Add rate limiter to user endpoints", "state": "merged", "repo": "api-server", "date": "2026-06-01" }
-#   ],
-#   "blockers": [{ "text": "Waiting on DevOps to provision staging DB", "date": "2026-06-01" }],
-#   "notes": []
-# }
+devlog show --from yesterday --json
+# Returns a JSON array — one object per day:
+# [
+#   {
+#     "version": "1",
+#     "date": "2026-06-01",
+#     "tags": ["auth"],
+#     "sections": {
+#       "notes":    ["Refactored auth middleware..."],
+#       "commits":  [{ "sha": "abc1234", "message": "fix: oauth token refresh loop", "repo": "api-server" }],
+#       "prs":      [{ "number": 142, "title": "Add rate limiter...", "state": "merged", "repo": "api-server" }],
+#       "blockers": []
+#     }
+#   }
+# ]
 ```
 
-### Sync git activity before generating standup
+### Sync git activity before reviewing recent work
 
 ```bash
-devlog sync --quiet && devlog standup --json
+devlog sync --quiet && devlog show --from yesterday --json
 ```
 
 ### Target a specific date
@@ -104,26 +106,16 @@ devlog edit yesterday
 }
 ```
 
-### `devlog standup --json`
+### `devlog show --from DATE --json` (date range)
+
+Returns a JSON array where each element has the same shape as the single-day schema above:
 
 ```json
-{
-  "version": "1",
-  "generated_at": "YYYY-MM-DDTHH:mm:ssZ",
-  "period": {
-    "since": "YYYY-MM-DD",
-    "until": "YYYY-MM-DD"
-  },
-  "done": [
-    { "type": "commit", "sha": "string", "message": "string", "repo": "string", "date": "YYYY-MM-DD" },
-    { "type": "pr",     "number": 142,    "title":   "string", "state": "string", "repo": "string", "date": "YYYY-MM-DD" }
-  ],
-  "blockers": [{ "text": "string", "date": "YYYY-MM-DD" }],
-  "notes":    [{ "text": "string", "date": "YYYY-MM-DD" }]
-}
+[
+  { "version": "1", "date": "YYYY-MM-DD", "tags": [], "sections": { ... } },
+  { "version": "1", "date": "YYYY-MM-DD", "tags": [], "sections": { ... } }
+]
 ```
-
-> **Note:** `show --json` uses simple string arrays for `notes` and `blockers`, while `standup --json` uses objects with `text` and `date` fields. This reflects their different purposes — show is a raw day view; standup is an aggregated report with per-item timestamps.
 
 ### Version field semantics
 

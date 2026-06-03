@@ -8,6 +8,7 @@ import (
 	"github.com/kacheo/devlog/internal/store"
 )
 
+
 func makeEntry(dateStr string) *store.DayEntry {
 	date, _ := time.ParseInLocation("2006-01-02", dateStr, time.Local)
 	e := store.EmptyEntry(date)
@@ -88,42 +89,3 @@ func TestShowJSONWeek_Array(t *testing.T) {
 	}
 }
 
-func TestStandupJSON(t *testing.T) {
-	since := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
-	until := time.Date(2026, 6, 2, 0, 0, 0, 0, time.Local)
-	doneEntry := makeEntry("2026-06-01")
-	todayEntry := makeEntry("2026-06-02")
-
-	out, err := StandupJSON(since, until, []*store.DayEntry{doneEntry}, todayEntry)
-	if err != nil {
-		t.Fatalf("StandupJSON() error = %v", err)
-	}
-
-	var v map[string]interface{}
-	if err := json.Unmarshal(out, &v); err != nil {
-		t.Fatalf("output is not valid JSON: %v", err)
-	}
-	if v["version"] != "1" {
-		t.Errorf("version = %v", v["version"])
-	}
-	if v["generated_at"] == "" || v["generated_at"] == nil {
-		t.Error("generated_at is empty")
-	}
-	period := v["period"].(map[string]interface{})
-	if period["since"] != "2026-06-01" {
-		t.Errorf("period.since = %v", period["since"])
-	}
-	done := v["done"].([]interface{})
-	// Entry has 1 commit + 1 PR = 2 done items
-	if len(done) != 2 {
-		t.Fatalf("done len = %d, want 2", len(done))
-	}
-	blockers := v["blockers"].([]interface{})
-	if len(blockers) != 1 {
-		t.Errorf("blockers len = %d, want 1", len(blockers))
-	}
-	b := blockers[0].(map[string]interface{})
-	if b["text"] != "Blocked on review" {
-		t.Errorf("blocker text = %v", b["text"])
-	}
-}

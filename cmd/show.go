@@ -17,6 +17,8 @@ var (
 	showTag      string
 	showRepo     string
 	showSections []string
+	showFrom     string
+	showUntil    string
 )
 
 var showCmd = &cobra.Command{
@@ -32,24 +34,27 @@ func init() {
 	showCmd.Flags().StringVar(&showRepo, "repo", "", "include only entries with commits/PRs from this repo")
 	showCmd.Flags().StringSliceVar(&showSections, "section", nil,
 		"render only these sections: notes, blockers, action_items (repeatable or comma-separated)")
+	showCmd.Flags().StringVar(&showFrom, "from", "", "start of date range (inclusive)")
+	showCmd.Flags().StringVar(&showUntil, "until", "", "end of date range (inclusive), defaults to today")
 }
 
 func runShow(cmd *cobra.Command, args []string) error {
-	// Mutual exclusion
+	// Mutual exclusions
 	if len(args) > 0 && globalDate != "" {
 		return fmt.Errorf("--date and positional date argument are mutually exclusive")
+	}
+	if (showFrom != "" || showUntil != "") && globalDate != "" {
+		return fmt.Errorf("--date and --from/--until are mutually exclusive")
+	}
+	if (showFrom != "" || showUntil != "") && len(args) > 0 {
+		return fmt.Errorf("--from/--until and positional date argument are mutually exclusive")
+	}
+	if showUntil != "" && showFrom == "" {
+		return fmt.Errorf("--until requires --from")
 	}
 
 	if err := validateShowSections(showSections); err != nil {
 		return err
-	}
-
-	// Determine what to show
-	target := "today"
-	if globalDate != "" {
-		target = globalDate
-	} else if len(args) > 0 {
-		target = args[0]
 	}
 
 	cfg, err := config.Load(config.DefaultPath())
@@ -64,8 +69,40 @@ func runShow(cmd *cobra.Command, args []string) error {
 
 	w := cmd.OutOrStdout()
 
+	// Date range mode
+	if showFrom != "" {
+		from, err := store.ParseDate(showFrom)
+		if err != nil {
+			return fmt.Errorf("invalid --from date: %w", err)
+		}
+		var until time.Time
+		if showUntil != "" {
+			until, err = store.ParseDate(showUntil)
+			if err != nil {
+				return fmt.Errorf("invalid --until date: %w", err)
+			}
+		} else {
+			now := time.Now()
+			y, m, d := now.Date()
+			until = time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		}
+		return showRange(st, from, until, w)
+	}
+
+	// Determine what to show (single day or week shorthand)
+	target := "today"
+	if globalDate != "" {
+		target = globalDate
+	} else if len(args) > 0 {
+		target = args[0]
+	}
+
 	if target == "week" {
-		return showWeek(st, w)
+		now := time.Now()
+		y, m, d := now.Date()
+		until := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
+		from := until.AddDate(0, 0, -6)
+		return showRange(st, from, until, w)
 	}
 
 	// Single day
@@ -100,14 +137,10 @@ func runShow(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func showWeek(st *store.Store, w io.Writer) error {
-	now := time.Now()
+func showRange(st *store.Store, from, until time.Time, w io.Writer) error {
 	var entries []*store.DayEntry
-	for i := 6; i >= 0; i-- {
-		date := now.AddDate(0, 0, -i)
-		y, m, d := date.Date()
-		midnight := time.Date(y, m, d, 0, 0, 0, 0, time.Local)
-		entry, err := st.Load(midnight)
+	for cursor := from; !cursor.After(until); cursor = cursor.AddDate(0, 0, 1) {
+		entry, err := st.Load(cursor)
 		if err != nil {
 			continue // skip days with errors
 		}
@@ -126,7 +159,7 @@ func showWeek(st *store.Store, w io.Writer) error {
 	}
 
 	if len(entries) == 0 {
-		fmt.Fprintln(w, "(no entries this week)")
+		fmt.Fprintln(w, "(no entries)")
 		return nil
 	}
 	for _, entry := range entries {
