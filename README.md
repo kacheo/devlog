@@ -164,6 +164,8 @@ name = "frontend"
 
 devlog works with any CLI-based agent — no MCP server needed. See [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) for the full JSON schema and integration patterns.
 
+For the complete command reference, advanced filtering, workspace management, and troubleshooting, see the [User Guide](docs/user-guide.md).
+
 ```bash
 devlog show today --json          # read today's context before starting work
 devlog add "what was done"        # log completed tasks

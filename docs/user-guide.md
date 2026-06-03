@@ -1,0 +1,575 @@
+# devlog User Guide
+
+This guide covers the full command set, advanced filtering, workspace management, editing entries, and AI agent integration patterns. The [README](../README.md) is the quick-start reference; this guide fills in everything else.
+
+---
+
+## Table of Contents
+
+- [Full Command Reference](#full-command-reference)
+- [Daily File Format](#daily-file-format)
+- [Workspace Management](#workspace-management)
+- [Filtering and Searching](#filtering-and-searching)
+- [Editing Entries](#editing-entries)
+- [AI Agent Integration](#ai-agent-integration)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Full Command Reference
+
+### Global Flags
+
+These flags work on every command:
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit structured JSON output (all output commands) |
+| `--date YYYY-MM-DD` | Target a specific date instead of today |
+
+---
+
+### `init`
+
+First-time setup: create config and optionally install git hooks.
+
+```
+devlog init [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--non-interactive` | Use defaults without prompting |
+| `--add-repo <path>` | Register a repo path (repeatable) |
+
+`devlog init` creates `~/.config/devlog/config.toml`, prompts for repo paths to watch, and offers to install a `post-commit` hook in each. Existing hooks are not overwritten — the managed block is appended.
+
+```bash
+# Interactive setup
+devlog init
+
+# Unattended setup
+devlog init --non-interactive \
+  --add-repo ~/workspace/api-server \
+  --add-repo ~/workspace/frontend
+```
+
+---
+
+### `add`
+
+Append a bullet to a section of today's journal.
+
+```
+devlog add "text" [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--section <name>` | Section to append to: `notes` (default), `blockers`, `action_items` |
+| `--tag <tag>` | Add a tag to today's frontmatter (repeatable) |
+
+```bash
+devlog add "Shipped the rate limiter PR"
+devlog add "Blocked on staging DB provisioning" --section blockers
+devlog add "Write integration tests for /v2/users" --section action_items
+devlog add "Deployed new auth flow" --tag backend --tag auth
+```
+
+---
+
+### `edit`
+
+Open a day file in `$EDITOR`.
+
+```
+devlog edit [DATE]
+```
+
+`DATE` accepts `today`, `yesterday`, or `YYYY-MM-DD`. Defaults to today.
+
+```bash
+devlog edit
+devlog edit yesterday
+devlog edit 2026-05-28
+```
+
+---
+
+### `show`
+
+Print journal entries for a day or date range.
+
+```
+devlog show [today|yesterday|YYYY-MM-DD|week] [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--section <name>` | Render only these sections: `notes`, `blockers`, `action_items` (repeatable or comma-separated) |
+| `--tag <tag>` | Include only entries that have this tag |
+| `--repo <name>` | Include only entries with commits or PRs from this repo |
+| `--json` | Emit structured JSON |
+
+```bash
+devlog show today
+devlog show week
+devlog show 2026-05-28
+
+# Show only blockers for this week
+devlog show week --section blockers
+
+# Show only entries tagged "backend"
+devlog show week --tag backend
+
+# Show only entries with activity in api-server
+devlog show week --repo api-server
+
+# Combine filters and JSON output
+devlog show week --section notes --section action_items --json
+```
+
+`week` covers the last 7 days from today. `--date` is not compatible with `week` — use a specific date (e.g. `devlog show 2026-05-28`) to target a past day.
+
+---
+
+### `sync`
+
+Import today's commits and PRs from configured repos.
+
+```
+devlog sync [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--quiet` | Suppress all output |
+
+```bash
+devlog sync
+devlog sync --quiet        # used in git hooks
+devlog sync --date 2026-05-30   # back-fill a specific date
+```
+
+`sync` is idempotent — running it multiple times deduplicates by commit SHA and PR number. The post-commit hook runs `devlog sync --quiet` automatically when installed.
+
+---
+
+### `standup`
+
+Compile done items (commits + PRs) and current blockers for a standup summary.
+
+```
+devlog standup [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--since <date>` | Collect done items from this date (default: yesterday) |
+| `--json` | Emit structured JSON |
+
+```bash
+devlog standup
+devlog standup --since 2026-05-28   # cross-weekend catch-up
+devlog standup --json               # for agent or script consumption
+```
+
+---
+
+### `search`
+
+Full-text search across all journal entries.
+
+```
+devlog search <query> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--section <name>` | Search only these sections: `notes`, `blockers`, `action_items`, `commits`, `prs` (repeatable or comma-separated) |
+| `--from <YYYY-MM-DD>` | Earliest date to search |
+| `--until <YYYY-MM-DD>` | Latest date to search |
+| `--json` | Emit structured JSON |
+
+```bash
+devlog search "rate limiter"
+devlog search "staging" --section blockers
+devlog search "auth" --from 2026-05-01 --until 2026-05-31
+devlog search "deploy" --section commits --section prs --json
+```
+
+Without `--from`/`--until`, search covers all available entries.
+
+`search --json` returns an array of match objects:
+
+```json
+[
+  { "date": "2026-05-28", "section": "notes", "line": "Fixed the OAuth token refresh loop" },
+  { "date": "2026-05-29", "section": "commits", "line": "abc1234 fix: oauth token refresh (api-server)" }
+]
+```
+
+---
+
+### `rm`
+
+Remove a bullet from a section by its 1-based index.
+
+```
+devlog rm --id <n> [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <n>` | 1-based index of the bullet to remove (required) |
+| `--section <name>` | Section to remove from (default: `notes`) |
+
+```bash
+# Show today's notes with indices
+devlog show today
+
+# Remove the 2nd bullet from notes
+devlog rm --id 2
+
+# Remove the 1st blocker
+devlog rm --id 1 --section blockers
+
+# Target a past date
+devlog rm --id 3 --date 2026-05-28
+```
+
+Use `devlog show today` first to confirm bullet indices before removing.
+
+---
+
+### `update`
+
+Replace a bullet in a section by its 1-based index.
+
+```
+devlog update --id <n> "new text" [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--id <n>` | 1-based index of the bullet to replace (required) |
+| `--section <name>` | Section to update (default: `notes`) |
+
+```bash
+# Replace the 1st note
+devlog update --id 1 "Shipped rate limiter — also fixed edge case with empty token"
+
+# Replace the 2nd action item
+devlog update --id 2 "Write integration tests (done)" --section action_items
+```
+
+---
+
+### `workspace`
+
+Manage workspace directories for automatic repo discovery.
+
+```
+devlog workspace <subcommand>
+```
+
+See [Workspace Management](#workspace-management) for full details.
+
+| Subcommand | Description |
+|------------|-------------|
+| `workspace add <path>` | Register a workspace directory |
+| `workspace list` | List workspaces and their discovered repos |
+| `workspace exclude <repo-path>` | Exclude a specific repo path from its parent workspace |
+
+---
+
+## Daily File Format
+
+Each day is stored as `~/devlog/YYYY-MM-DD.md`. The full schema including all sections:
+
+```markdown
+---
+date: 2026-06-01
+tags: [auth, backend]
+commits:
+  - { sha: abc1234, message: "fix: oauth token refresh loop", repo: api-server }
+  - { sha: def5678, message: "feat: add rate limiter to /v2/users", repo: api-server }
+prs:
+  - { number: 142, title: "Add rate limiter to user endpoints", state: merged, repo: api-server }
+---
+
+## Notes
+- Fixed the OAuth token refresh loop
+- Reviewed Alice's PR on the API rate limiter
+
+## Blockers
+- Waiting on DevOps to provision staging DB
+
+## Action Items
+- Write integration tests for /v2/users endpoint
+
+## Commits
+- abc1234 fix: oauth token refresh loop (api-server)
+- def5678 feat: add rate limiter to /v2/users (api-server)
+
+## PRs
+- #142 Add rate limiter to user endpoints [merged] (api-server)
+```
+
+**Section ownership:**
+
+| Section | Written by | Edit how |
+|---------|-----------|---------|
+| Frontmatter (`commits`, `prs`) | `devlog sync` | Do not edit manually |
+| `## Notes` | `devlog add` / `devlog edit` | `devlog add`, `devlog rm`, `devlog update` |
+| `## Blockers` | `devlog add --section blockers` | `devlog rm/update --section blockers` |
+| `## Action Items` | `devlog add --section action_items` | `devlog rm/update --section action_items` |
+| `## Commits` / `## PRs` | Rendered from frontmatter | Do not edit manually |
+
+The `## Commits` and `## PRs` body sections are re-rendered from frontmatter on every `sync` — manual edits there will be overwritten. Use the `--json` output to read structured commit and PR data programmatically.
+
+---
+
+## Workspace Management
+
+Workspaces let devlog auto-discover repos within a directory tree, so you don't have to list every repo individually in `config.toml`.
+
+### Register a workspace
+
+```bash
+devlog workspace add ~/workspace
+```
+
+devlog will scan `~/workspace` for git repos and add them to sync automatically.
+
+### List discovered repos
+
+```bash
+devlog workspace list
+```
+
+Shows each registered workspace and the repos devlog found within it.
+
+### Exclude a repo
+
+If a workspace contains repos you don't want tracked:
+
+```bash
+devlog workspace exclude ~/workspace/vendor/some-lib
+```
+
+Excluded repos are remembered across syncs — they won't reappear.
+
+### Workspaces vs. explicit repos
+
+Both can coexist in `config.toml`. Explicit `[[repos]]` entries always sync. Workspace-discovered repos sync unless excluded. For a monorepo or tightly scoped setup, explicit repos are simpler. For a workspace with many projects, workspace auto-discovery reduces maintenance.
+
+> **Note:** `--json` has no effect on `workspace` commands. Their output is always plain text.
+
+---
+
+## Filtering and Searching
+
+### Filter `show` output
+
+```bash
+# Show only notes and action items for this week
+devlog show week --section notes --section action_items
+
+# Comma-separated is equivalent
+devlog show week --section notes,action_items
+
+# All entries tagged "backend" in the last week
+devlog show week --tag backend
+
+# Only days with activity in the "api-server" repo
+devlog show week --repo api-server
+
+# Combine: notes from days with api-server activity
+devlog show week --section notes --repo api-server
+```
+
+### Search across all history
+
+```bash
+# Find any entry mentioning "rate limiter"
+devlog search "rate limiter"
+
+# Limit to a date range
+devlog search "auth" --from 2026-05-01 --until 2026-05-31
+
+# Search only in commits and PRs
+devlog search "deploy" --section commits --section prs
+
+# Search blockers for a specific issue
+devlog search "DB provisioning" --section blockers
+
+# Output as JSON for scripting
+devlog search "migration" --json
+```
+
+### Target a specific date with `--date`
+
+The global `--date` flag is honored by: `show`, `add`, `edit`, `rm`, `update`, and `sync`.
+It is **not** used by `search` (use `--from`/`--until` instead) or `standup` (use `--since`).
+
+```bash
+devlog show --date 2026-05-28
+devlog add "Back-filled note" --date 2026-05-28
+devlog sync --date 2026-05-28
+```
+
+---
+
+## AI Agent Integration
+
+devlog is designed for CLI-based agent workflows. Every output command emits `--json`. No MCP server required.
+
+### Core pattern
+
+```bash
+# 1. Read current context before starting work
+devlog show today --json
+
+# 2. Log completed tasks
+devlog add "Refactored auth middleware"
+
+# 3. Import git activity
+devlog sync --quiet
+
+# 4. Produce standup summary
+devlog standup --json
+```
+
+### `show --json` schema
+
+```json
+{
+  "version": "1",
+  "date": "2026-06-01",
+  "tags": ["auth", "backend"],
+  "sections": {
+    "notes":        ["Refactored auth middleware..."],
+    "blockers":     ["Waiting on DB provisioning"],
+    "action_items": ["Write integration tests"],
+    "commits":      [{ "sha": "abc1234", "message": "fix: oauth token refresh", "repo": "api-server" }],
+    "prs":          [{ "number": 142, "title": "Add rate limiter", "state": "merged", "repo": "api-server" }]
+  }
+}
+```
+
+### `standup --json` schema
+
+```json
+{
+  "version": "1",
+  "generated_at": "2026-06-02T09:00:00Z",
+  "period": { "since": "2026-06-01", "until": "2026-06-02" },
+  "done": [
+    { "type": "commit", "sha": "abc1234", "message": "fix: oauth token refresh", "repo": "api-server", "date": "2026-06-01" },
+    { "type": "pr", "number": 142, "title": "Add rate limiter", "state": "merged", "repo": "api-server", "date": "2026-06-01" }
+  ],
+  "blockers": [{ "text": "Waiting on DB provisioning", "date": "2026-06-01" }],
+  "notes":    [{ "text": "Refactored auth middleware", "date": "2026-06-01" }]
+}
+```
+
+> `show --json` uses string arrays for `notes` and `blockers`; `standup --json` uses objects with `text` and `date`. Check `version` before parsing; additive fields keep version `"1"`, breaking changes increment it.
+
+### jq patterns
+
+```bash
+# Extract today's blocker list
+devlog show today --json | jq '.sections.blockers[]'
+
+# Check if any PRs were merged today
+devlog show today --json | jq '[.sections.prs[] | select(.state == "merged")] | length'
+
+# List all repos with commits today
+devlog show today --json | jq '[.sections.commits[].repo] | unique'
+
+# Get standup done items as plain text
+devlog standup --json | jq -r '.done[] | "\(.type): \(.message // .title) (\(.repo))"'
+
+# Search returns [{date, section, line}] — count matches per date
+devlog search "auth" --json | jq 'group_by(.date) | map({date: .[0].date, count: length})'
+
+# Extract only blocker matches from search
+devlog search "staging" --json | jq '[.[] | select(.section == "blockers") | .line]'
+```
+
+### Environment variables
+
+| Variable | Effect |
+|----------|--------|
+| `DEVLOG_DIR` | Journal directory (default: `~/devlog`) |
+| `DEVLOG_EDITOR` | Editor for `devlog edit` |
+| `DEVLOG_GITHUB_TOKEN` | GitHub token for REST-based PR import |
+
+```bash
+export DEVLOG_DIR=~/my-journal
+export DEVLOG_GITHUB_TOKEN=ghp_...
+devlog sync
+```
+
+---
+
+## Troubleshooting
+
+### `gh` CLI not found or not authenticated
+
+devlog falls back gracefully — commits still import, PRs are skipped silently. To enable PR import:
+
+```bash
+brew install gh          # or your platform's package manager
+gh auth login
+```
+
+### GitHub PRs not importing via REST API
+
+Set `DEVLOG_GITHUB_TOKEN` or add `token` to `config.toml` under `[github]`. The token needs `repo` scope for private repos, `public_repo` for public repos only.
+
+### Post-commit hook not running
+
+Check that the hook exists and is executable:
+
+```bash
+cat ~/workspace/your-repo/.git/hooks/post-commit
+chmod +x ~/workspace/your-repo/.git/hooks/post-commit
+```
+
+If it exists but `devlog` isn't on `$PATH` inside the hook environment, add the full path:
+
+```sh
+/Users/you/go/bin/devlog sync --quiet
+```
+
+### Sync writes duplicate entries
+
+`devlog sync` deduplicates by commit SHA and PR number within a day file. If you see duplicates, the entries likely have different SHAs (e.g., rebased commits) or the day file was manually edited in a way that broke frontmatter parsing. Open the file with `devlog edit` and remove the duplicate frontmatter entries.
+
+### `devlog show week` missing some days
+
+`week` shows the last 7 days. Days without a journal file (no `devlog add` or `devlog sync` ran that day) are skipped silently. To check if a file exists:
+
+```bash
+ls ~/devlog/2026-05-*.md
+```
+
+### Config file location
+
+```bash
+cat ~/.config/devlog/config.toml
+```
+
+If the file is missing, run `devlog init` to create it.
+
+### `devlog` not found after `go install`
+
+Make sure `~/go/bin` is on your `$PATH`:
+
+```bash
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
+Add that line to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.) to persist it.
