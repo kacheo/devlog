@@ -8,7 +8,6 @@ import (
 	"github.com/kacheo/devlog/internal/store"
 )
 
-
 func makeEntry(dateStr string) *store.DayEntry {
 	date, _ := time.ParseInLocation("2006-01-02", dateStr, time.Local)
 	e := store.EmptyEntry(date)
@@ -16,13 +15,18 @@ func makeEntry(dateStr string) *store.DayEntry {
 	e.Commits = []store.Commit{{SHA: "abc1234", Message: "fix: auth bug", Repo: "api"}}
 	e.PRs = []store.PR{{Number: 10, Title: "Fix auth", State: "merged", Repo: "api"}}
 	e.Sections["notes"] = []string{"Did some work"}
-	e.Sections["blockers"] = []string{"Blocked on review"}
 	return e
 }
 
+func makeBlocker(id, text string) store.Item {
+	return store.Item{ID: id, Type: "blocker", Text: text, Resolved: false, Dependencies: []string{}}
+}
+
+
 func TestShowJSON_SingleDay(t *testing.T) {
 	entry := makeEntry("2026-06-01")
-	out, err := ShowJSON(entry)
+	blockers := []store.Item{makeBlocker("deadbeef-0000-4000-8000-aabbccddeeff", "Blocked on review")}
+	out, err := ShowJSON(entry, blockers, nil)
 	if err != nil {
 		t.Fatalf("ShowJSON() error = %v", err)
 	}
@@ -58,10 +62,22 @@ func TestShowJSON_SingleDay(t *testing.T) {
 	if pr["number"] != float64(10) {
 		t.Errorf("pr number = %v", pr["number"])
 	}
+	// Blockers are now objects with id/text/resolved/dependencies
+	blockersJSON := sections["blockers"].([]interface{})
+	if len(blockersJSON) != 1 {
+		t.Fatalf("blockers len = %d, want 1", len(blockersJSON))
+	}
+	b := blockersJSON[0].(map[string]interface{})
+	if b["text"] != "Blocked on review" {
+		t.Errorf("blocker text = %v", b["text"])
+	}
+	if b["resolved"] != false {
+		t.Errorf("blocker resolved = %v, want false", b["resolved"])
+	}
 }
 
 func TestShowJSON_NilEntry_IsNull(t *testing.T) {
-	out, err := ShowJSON(nil)
+	out, err := ShowJSON(nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ShowJSON(nil) error = %v", err)
 	}
@@ -72,7 +88,7 @@ func TestShowJSON_NilEntry_IsNull(t *testing.T) {
 
 func TestShowJSONWeek_Array(t *testing.T) {
 	entries := []*store.DayEntry{makeEntry("2026-06-01"), makeEntry("2026-06-02")}
-	out, err := ShowJSONWeek(entries)
+	out, err := ShowJSONWeek(entries, nil, nil)
 	if err != nil {
 		t.Fatalf("ShowJSONWeek() error = %v", err)
 	}
@@ -89,3 +105,23 @@ func TestShowJSONWeek_Array(t *testing.T) {
 	}
 }
 
+func TestShowJSON_EmptyItemsSlices(t *testing.T) {
+	entry := makeEntry("2026-06-01")
+	out, err := ShowJSON(entry, []store.Item{}, []store.Item{})
+	if err != nil {
+		t.Fatalf("ShowJSON() error = %v", err)
+	}
+	var v map[string]interface{}
+	if err := json.Unmarshal(out, &v); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	sections := v["sections"].(map[string]interface{})
+	blockers := sections["blockers"].([]interface{})
+	if len(blockers) != 0 {
+		t.Errorf("blockers = %v, want []", blockers)
+	}
+	ai := sections["action_items"].([]interface{})
+	if len(ai) != 0 {
+		t.Errorf("action_items = %v, want []", ai)
+	}
+}

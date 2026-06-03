@@ -16,15 +16,22 @@ type showDayJSON struct {
 
 type showSectionsJSON struct {
 	Notes       []string       `json:"notes"`
-	ActionItems []string       `json:"action_items"`
+	ActionItems []itemJSON     `json:"action_items"`
 	Commits     []store.Commit `json:"commits"`
 	PRs         []store.PR     `json:"prs"`
-	Blockers    []string       `json:"blockers"`
+	Blockers    []itemJSON     `json:"blockers"`
 }
 
-// ShowJSON serializes a single DayEntry to JSON (show --json).
+type itemJSON struct {
+	ID           string   `json:"id"`
+	Text         string   `json:"text"`
+	Resolved     bool     `json:"resolved"`
+	Dependencies []string `json:"dependencies"`
+}
+
+// ShowJSON serializes a single DayEntry plus unresolved global items to JSON (show --json).
 // Returns []byte("null") for a nil entry (missing day file).
-func ShowJSON(entry *store.DayEntry) ([]byte, error) {
+func ShowJSON(entry *store.DayEntry, blockers []store.Item, actionItems []store.Item) ([]byte, error) {
 	if entry == nil {
 		return []byte("null"), nil
 	}
@@ -34,39 +41,59 @@ func ShowJSON(entry *store.DayEntry) ([]byte, error) {
 		Tags:    notNilStrings(entry.Tags),
 		Sections: showSectionsJSON{
 			Notes:       notNilStrings(entry.Sections["notes"]),
-			ActionItems: notNilStrings(entry.Sections["action_items"]),
+			ActionItems: toItemJSONSlice(actionItems),
 			Commits:     notNilCommits(entry.Commits),
 			PRs:         notNilPRs(entry.PRs),
-			Blockers:    notNilStrings(entry.Sections["blockers"]),
+			Blockers:    toItemJSONSlice(blockers),
 		},
 	}
 	return json.Marshal(v)
 }
 
 // ShowJSONWeek serializes a slice of DayEntry (one per day) as a JSON array.
-func ShowJSONWeek(entries []*store.DayEntry) ([]byte, error) {
+// Global items are attached to every day entry in the range.
+func ShowJSONWeek(entries []*store.DayEntry, blockers []store.Item, actionItems []store.Item) ([]byte, error) {
 	days := make([]showDayJSON, 0, len(entries))
 	for _, e := range entries {
-		days = append(days, toDayJSON(e))
+		days = append(days, toDayJSON(e, blockers, actionItems))
 	}
 	return json.Marshal(days)
 }
 
-func toDayJSON(e *store.DayEntry) showDayJSON {
+func toDayJSON(e *store.DayEntry, blockers []store.Item, actionItems []store.Item) showDayJSON {
 	return showDayJSON{
 		Version: "1",
 		Date:    e.Date.Format("2006-01-02"),
 		Tags:    notNilStrings(e.Tags),
 		Sections: showSectionsJSON{
 			Notes:       notNilStrings(e.Sections["notes"]),
-			ActionItems: notNilStrings(e.Sections["action_items"]),
+			ActionItems: toItemJSONSlice(actionItems),
 			Commits:     notNilCommits(e.Commits),
 			PRs:         notNilPRs(e.PRs),
-			Blockers:    notNilStrings(e.Sections["blockers"]),
+			Blockers:    toItemJSONSlice(blockers),
 		},
 	}
 }
 
+func toItemJSONSlice(items []store.Item) []itemJSON {
+	if len(items) == 0 {
+		return []itemJSON{}
+	}
+	out := make([]itemJSON, len(items))
+	for i, it := range items {
+		deps := it.Dependencies
+		if deps == nil {
+			deps = []string{}
+		}
+		out[i] = itemJSON{
+			ID:           it.ID,
+			Text:         it.Text,
+			Resolved:     it.Resolved,
+			Dependencies: deps,
+		}
+	}
+	return out
+}
 
 func notNilStrings(s []string) []string {
 	if s == nil {

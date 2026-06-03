@@ -80,14 +80,14 @@ func TestParse_ProseSection_Notes(t *testing.T) {
 	}
 }
 
-func TestParse_ProseSection_Blockers(t *testing.T) {
+func TestParse_ProseSection_Blockers_Ignored(t *testing.T) {
+	// Blockers in day files are silently ignored — they live in items.yaml now.
 	entry, err := Parse(sampleFile)
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
-	blockers := entry.Sections["blockers"]
-	if len(blockers) != 1 || blockers[0] != "Waiting on DevOps to provision staging DB" {
-		t.Errorf("blockers = %v", blockers)
+	if _, ok := entry.Sections["blockers"]; ok {
+		t.Error("blockers key should not exist in day entry after schema change")
 	}
 }
 
@@ -309,39 +309,57 @@ func TestKnownSections_NoCommitsPRs(t *testing.T) {
 	}
 }
 
-func TestKnownSections_HasActionItems(t *testing.T) {
-	found := false
-	for _, s := range KnownSections {
+func TestGlobalSections_HasActionItemsAndBlockers(t *testing.T) {
+	hasAI, hasB := false, false
+	for _, s := range GlobalSections {
 		if s == "action_items" {
-			found = true
+			hasAI = true
+		}
+		if s == "blockers" {
+			hasB = true
 		}
 	}
-	if !found {
-		t.Error("KnownSections missing action_items")
+	if !hasAI {
+		t.Error("GlobalSections missing action_items")
+	}
+	if !hasB {
+		t.Error("GlobalSections missing blockers")
+	}
+	// Neither should be in KnownSections (day-file only)
+	for _, s := range KnownSections {
+		if s == "action_items" || s == "blockers" {
+			t.Errorf("KnownSections should not contain %q (it belongs in GlobalSections)", s)
+		}
 	}
 }
 
-func TestActionItems_RoundTrip(t *testing.T) {
+func TestNotes_RoundTrip(t *testing.T) {
 	e := EmptyEntry(time.Date(2026, 1, 4, 0, 0, 0, 0, time.Local))
-	e.Sections["action_items"] = []string{"review PR", "update docs"}
+	e.Sections["notes"] = []string{"review PR", "update docs"}
 
 	data, err := Serialize(e)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(data, []byte("## Action Items")) {
-		t.Error("expected ## Action Items heading in serialized output")
+	if !bytes.Contains(data, []byte("## Notes")) {
+		t.Error("expected ## Notes heading in serialized output")
+	}
+	if bytes.Contains(data, []byte("## Action Items")) {
+		t.Error("## Action Items should not appear in day file (moved to global items)")
+	}
+	if bytes.Contains(data, []byte("## Blockers")) {
+		t.Error("## Blockers should not appear in day file (moved to global items)")
 	}
 
 	parsed, err := Parse(data)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(parsed.Sections["action_items"]) != 2 {
-		t.Fatalf("expected 2 action_items, got %v", parsed.Sections["action_items"])
+	if len(parsed.Sections["notes"]) != 2 {
+		t.Fatalf("expected 2 notes, got %v", parsed.Sections["notes"])
 	}
-	if parsed.Sections["action_items"][0] != "review PR" {
-		t.Errorf("expected 'review PR', got %q", parsed.Sections["action_items"][0])
+	if parsed.Sections["notes"][0] != "review PR" {
+		t.Errorf("expected 'review PR', got %q", parsed.Sections["notes"][0])
 	}
 }
 
@@ -364,7 +382,9 @@ func TestNormalizeSection_CommitsPRsRemoved(t *testing.T) {
 	}
 }
 
-func TestParse_ActionItems(t *testing.T) {
+func TestParse_LegacyActionItemsIgnored(t *testing.T) {
+	// Old day files with ## Action Items and ## Blockers sections should parse without error;
+	// the legacy sections are silently ignored (moved to items.yaml).
 	raw := []byte(`---
 date: "2026-01-07"
 tags: []
@@ -373,25 +393,26 @@ prs: []
 ---
 
 ## Notes
+- a note
 
 ## Action Items
 - review PR
 - update docs
 
 ## Blockers
+- some blocker
 `)
 	entry, err := Parse(raw)
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	items := entry.Sections["action_items"]
-	if len(items) != 2 {
-		t.Fatalf("expected 2 action_items, got %v", items)
+	if len(entry.Sections["notes"]) != 1 {
+		t.Errorf("notes = %v, want [a note]", entry.Sections["notes"])
 	}
-	if items[0] != "review PR" {
-		t.Errorf("items[0] = %q, want %q", items[0], "review PR")
+	if _, ok := entry.Sections["action_items"]; ok {
+		t.Error("action_items should not be present in day entry")
 	}
-	if items[1] != "update docs" {
-		t.Errorf("items[1] = %q, want %q", items[1], "update docs")
+	if _, ok := entry.Sections["blockers"]; ok {
+		t.Error("blockers should not be present in day entry")
 	}
 }
