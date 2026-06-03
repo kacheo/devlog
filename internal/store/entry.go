@@ -39,7 +39,11 @@ type DayEntry struct {
 	Sections map[string][]string
 }
 
-var KnownSections = []string{"notes", "action_items", "blockers"}
+// KnownSections are the sections stored in per-day markdown files.
+var KnownSections = []string{"notes"}
+
+// GlobalSections are stored in items.yaml, not in day files.
+var GlobalSections = []string{"blockers", "action_items"}
 
 func NormalizeSection(s string) (string, bool) {
 	switch strings.ToLower(s) {
@@ -51,6 +55,20 @@ func NormalizeSection(s string) (string, bool) {
 		return "action_items", true
 	}
 	return "", false
+}
+
+// IsGlobalSection reports whether section name maps to the global items store.
+func IsGlobalSection(s string) bool {
+	canon, ok := NormalizeSection(s)
+	if !ok {
+		return false
+	}
+	for _, g := range GlobalSections {
+		if g == canon {
+			return true
+		}
+	}
+	return false
 }
 
 func EmptyEntry(date time.Time) *DayEntry {
@@ -185,9 +203,7 @@ func Serialize(e *DayEntry) ([]byte, error) {
 	b.WriteString("---\n")
 
 	sectionTitles := map[string]string{
-		"notes":        "Notes",
-		"action_items": "Action Items",
-		"blockers":     "Blockers",
+		"notes": "Notes",
 	}
 
 	for _, sec := range KnownSections {

@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,21 +46,43 @@ func TestAddCmd_SectionFlag_Blockers(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
 	addSection = "blocker"
+	addDeps = nil
 	addTags = nil
 	globalDate = ""
 
+	buf := &bytes.Buffer{}
+	rootCmd.SetOut(buf)
 	rootCmd.SetArgs([]string{"add", "--section", "blocker", "stuck on CI"})
 	if err := rootCmd.Execute(); err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
 
+	// Blocker should be in items.yaml, not the day file
+	st, _ := store.New(dir)
+	items, err := st.LoadAllItems()
+	if err != nil {
+		t.Fatalf("LoadAllItems: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].Type != "blocker" || items[0].Text != "stuck on CI" {
+		t.Errorf("item = %+v, want type=blocker text='stuck on CI'", items[0])
+	}
+	// Day file should NOT contain blockers
 	today := time.Now()
 	path := filepath.Join(dir, today.Format("2006-01-02")+".md")
 	data, _ := os.ReadFile(path)
-	entry, _ := store.Parse(data)
-	blockers := entry.Sections["blockers"]
-	if len(blockers) != 1 || blockers[0] != "stuck on CI" {
-		t.Errorf("blockers = %v, want [stuck on CI]", blockers)
+	if len(data) > 0 {
+		entry, _ := store.Parse(data)
+		if _, ok := entry.Sections["blockers"]; ok {
+			t.Error("day file should not contain blockers section")
+		}
+	}
+	// Output should contain the short ID
+	output := buf.String()
+	if !strings.Contains(output, "added blocker:") {
+		t.Errorf("expected 'added blocker:' in output: %q", output)
 	}
 }
 

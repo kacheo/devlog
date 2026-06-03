@@ -20,11 +20,13 @@ func TestIntegration_AddShowRoundTrip(t *testing.T) {
 	globalDate = ""
 	addSection = ""
 	addTags = nil
+	addDeps = nil
 	t.Cleanup(func() {
 		globalJSON = false
 		globalDate = ""
 		addSection = ""
 		addTags = nil
+		addDeps = nil
 	})
 
 	// Add a note
@@ -74,9 +76,17 @@ func TestIntegration_AddShowRoundTrip(t *testing.T) {
 	if len(notes) != 1 || notes[0] != "completed the auth refactor" {
 		t.Errorf("JSON notes = %v", notes)
 	}
+	// Blockers are now objects with id/text/resolved/dependencies
 	blockers := sections["blockers"].([]interface{})
-	if len(blockers) != 1 || blockers[0] != "waiting on DB migration" {
-		t.Errorf("JSON blockers = %v", blockers)
+	if len(blockers) != 1 {
+		t.Fatalf("JSON blockers len = %d, want 1", len(blockers))
+	}
+	b := blockers[0].(map[string]interface{})
+	if b["text"] != "waiting on DB migration" {
+		t.Errorf("JSON blocker text = %v, want 'waiting on DB migration'", b["text"])
+	}
+	if b["resolved"] != false {
+		t.Errorf("JSON blocker resolved = %v, want false", b["resolved"])
 	}
 }
 
@@ -114,11 +124,13 @@ func TestIntegration_TagFlow(t *testing.T) {
 	globalDate = ""
 	addSection = ""
 	addTags = nil
+	addDeps = nil
 	t.Cleanup(func() {
 		globalJSON = false
 		globalDate = ""
 		addSection = ""
 		addTags = nil
+		addDeps = nil
 	})
 
 	rootCmd.SetArgs([]string{"add", "--tag", "infra", "--tag", "backend", "deployed new service"})

@@ -115,13 +115,19 @@ func runShow(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading day file: %w", err)
 	}
 
+	blockers, actionItems, itemErr := loadFilteredItems(st)
+	if itemErr != nil {
+		return itemErr
+	}
+
 	if !entryMatchesFilters(entry) {
 		fmt.Fprintln(w, "(no entry)")
 		return nil
 	}
 
 	if globalJSON {
-		out, err := render.ShowJSON(entry)
+		b, ai := applyItemSectionFilter(blockers, actionItems)
+		out, err := render.ShowJSON(entry, b, ai)
 		if err != nil {
 			return err
 		}
@@ -133,7 +139,8 @@ func runShow(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(w, "(no entry)")
 		return nil
 	}
-	render.ShowTerminal(filteredEntry(entry), w)
+	b, ai := applyItemSectionFilter(blockers, actionItems)
+	render.ShowTerminal(filteredEntry(entry), b, ai, w)
 	return nil
 }
 
@@ -149,8 +156,14 @@ func showRange(st *store.Store, from, until time.Time, w io.Writer) error {
 		}
 	}
 
+	blockers, actionItems, err := loadFilteredItems(st)
+	if err != nil {
+		return err
+	}
+	b, ai := applyItemSectionFilter(blockers, actionItems)
+
 	if globalJSON {
-		out, err := render.ShowJSONWeek(entries)
+		out, err := render.ShowJSONWeek(entries, b, ai)
 		if err != nil {
 			return err
 		}
@@ -164,10 +177,47 @@ func showRange(st *store.Store, from, until time.Time, w io.Writer) error {
 	}
 	for _, entry := range entries {
 		fmt.Fprintf(w, "=== %s ===\n", entry.Date.Format("2006-01-02"))
-		render.ShowTerminal(filteredEntry(entry), w)
+		render.ShowTerminal(filteredEntry(entry), b, ai, w)
 		fmt.Fprintln(w)
 	}
 	return nil
+}
+
+// loadFilteredItems loads all items and returns only unresolved blockers and action items.
+func loadFilteredItems(st *store.Store) (blockers []store.Item, actionItems []store.Item, err error) {
+	all, err := st.LoadAllItems()
+	if err != nil {
+		return nil, nil, fmt.Errorf("loading items: %w", err)
+	}
+	unresolved := store.FilterUnresolved(all)
+	b, ai := store.SplitByType(unresolved)
+	return b, ai, nil
+}
+
+// applyItemSectionFilter suppresses blockers or action_items slices based on showSections.
+// When showSections is empty, both are returned unchanged.
+func applyItemSectionFilter(blockers, actionItems []store.Item) ([]store.Item, []store.Item) {
+	if len(showSections) == 0 {
+		return blockers, actionItems
+	}
+	wantBlockers := false
+	wantActionItems := false
+	for _, s := range showSections {
+		canon, _ := store.NormalizeSection(s)
+		switch canon {
+		case "blockers":
+			wantBlockers = true
+		case "action_items":
+			wantActionItems = true
+		}
+	}
+	if !wantBlockers {
+		blockers = nil
+	}
+	if !wantActionItems {
+		actionItems = nil
+	}
+	return blockers, actionItems
 }
 
 // entryMatchesFilters returns true if entry satisfies the active showTag and showRepo filters.
@@ -210,25 +260,30 @@ func entryMatchesFilters(entry *store.DayEntry) bool {
 	return true
 }
 
-// filteredEntry returns a shallow copy of entry with only the sections requested by showSections.
+// filteredEntry returns a shallow copy of entry with only the day-file sections requested by showSections.
 // If showSections is empty, the original entry is returned unchanged.
 func filteredEntry(entry *store.DayEntry) *store.DayEntry {
 	if len(showSections) == 0 {
 		return entry
 	}
-	copy := *entry
-	copy.Sections = make(map[string][]string, len(showSections))
+	cp := *entry
+	cp.Sections = make(map[string][]string)
 	for _, sec := range showSections {
-		copy.Sections[sec] = entry.Sections[sec]
+		canon, _ := store.NormalizeSection(sec)
+		// Only copy day-file sections; global items are handled separately
+		if !store.IsGlobalSection(canon) {
+			cp.Sections[canon] = entry.Sections[canon]
+		}
 	}
-	return &copy
+	return &cp
 }
 
 func validateShowSections(sections []string) error {
+	allSections := append(store.KnownSections, store.GlobalSections...)
 	for _, s := range sections {
 		if _, ok := store.NormalizeSection(s); !ok {
 			return fmt.Errorf("unknown section %q: valid sections are %s",
-				s, strings.Join(store.KnownSections, ", "))
+				s, strings.Join(allSections, ", "))
 		}
 	}
 	return nil
