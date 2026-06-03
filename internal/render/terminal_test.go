@@ -25,25 +25,6 @@ func TestShowTerminal_ContainsEntries(t *testing.T) {
 	}
 }
 
-func TestStandupTerminal_ContainsSection(t *testing.T) {
-	since := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
-	until := time.Date(2026, 6, 2, 0, 0, 0, 0, time.Local)
-	done := makeEntry("2026-06-01")
-	today := makeEntry("2026-06-02")
-
-	var buf bytes.Buffer
-	StandupTerminal(since, until, []*store.DayEntry{done}, today, &buf)
-	out := buf.String()
-	if !strings.Contains(out, "Done") {
-		t.Errorf("output missing 'Done' section:\n%s", out)
-	}
-	if !strings.Contains(out, "Blocker") {
-		t.Errorf("output missing 'Blocker' section:\n%s", out)
-	}
-	if !strings.Contains(out, "abc1234") {
-		t.Errorf("output missing commit SHA:\n%s", out)
-	}
-}
 
 func TestShowTerminal_SectionOrder(t *testing.T) {
 	date := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
@@ -95,18 +76,3 @@ func TestShowTerminal_ActionItems(t *testing.T) {
 	}
 }
 
-func TestStandupTerminal_NilTodayEntry(t *testing.T) {
-	since := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
-	until := time.Date(2026, 6, 2, 0, 0, 0, 0, time.Local)
-
-	var buf bytes.Buffer
-	StandupTerminal(since, until, nil, nil, &buf)
-	out := buf.String()
-
-	if !strings.Contains(out, "(none)") {
-		t.Errorf("expected '(none)' placeholder with nil entries:\n%s", out)
-	}
-	if !strings.Contains(out, "Blockers:") {
-		t.Errorf("missing Blockers section:\n%s", out)
-	}
-}

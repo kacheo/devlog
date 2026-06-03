@@ -3,7 +3,6 @@ package render
 import (
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/kacheo/devlog/internal/store"
 )
@@ -43,56 +42,5 @@ func ShowTerminal(entry *store.DayEntry, w io.Writer) {
 		for i, b := range entry.Sections["blockers"] {
 			fmt.Fprintf(w, "  [%d] %s\n", i+1, b)
 		}
-	}
-}
-
-// StandupTerminal writes a human-readable standup view to w.
-// doneEntries: entries in the "since" period (done items).
-// todayEntry: today's entry for Notes+Blockers (may be nil).
-func StandupTerminal(since, until time.Time, doneEntries []*store.DayEntry, todayEntry *store.DayEntry, w io.Writer) {
-	// Header
-	fmt.Fprintf(w, "--- Standup: %s ---\n\n", until.Format("Monday, January 2"))
-
-	// Done section
-	fmt.Fprintf(w, "Done (since %s):\n", since.Format("2006-01-02"))
-	hasDone := false
-	for _, e := range doneEntries {
-		for _, c := range e.Commits {
-			fmt.Fprintf(w, "  • %s  %s  (%s · %s)\n", c.SHA, c.Message, c.Repo, e.Date.Format("2006-01-02"))
-			hasDone = true
-		}
-		for _, pr := range e.PRs {
-			fmt.Fprintf(w, "  • PR #%d %s [%s] (%s)\n", pr.Number, pr.Title, pr.State, pr.Repo)
-			hasDone = true
-		}
-	}
-	if !hasDone {
-		fmt.Fprintln(w, "  (none)")
-	}
-
-	// Blockers
-	fmt.Fprintln(w, "\nBlockers:")
-	hasBlockers := false
-	if todayEntry != nil {
-		for _, b := range todayEntry.Sections["blockers"] {
-			fmt.Fprintf(w, "  • %s\n", b)
-			hasBlockers = true
-		}
-	}
-	if !hasBlockers {
-		fmt.Fprintln(w, "  (none)")
-	}
-
-	// Notes today
-	fmt.Fprintln(w, "\nNotes (today so far):")
-	hasNotes := false
-	if todayEntry != nil {
-		for _, n := range todayEntry.Sections["notes"] {
-			fmt.Fprintf(w, "  • %s\n", n)
-			hasNotes = true
-		}
-	}
-	if !hasNotes {
-		fmt.Fprintln(w, "  (none)")
 	}
 }

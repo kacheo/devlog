@@ -14,8 +14,8 @@ devlog sync --quiet        # import git commits and PRs
 
 ## Key Sections in AGENT_INSTRUCTIONS.md
 
-- **Usage Patterns** — JSON output, add/show/standup/sync commands
-- **JSON Schema** — versioned `show --json` and `standup --json` output format
+- **Usage Patterns** — JSON output, add/show/sync commands
+- **JSON Schema** — versioned `show --json` output format (single day or array for ranges)
 - **Environment Variables** — `DEVLOG_DIR`, `DEVLOG_GITHUB_TOKEN`, `DEVLOG_EDITOR`
 - **Project Structure** — `cmd/` (public surface), `internal/` (private), import boundary
 - **Adding a Command** — cobra pattern with `RunE` and `rootCmd.AddCommand`
