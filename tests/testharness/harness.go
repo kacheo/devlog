@@ -44,6 +44,7 @@ func Build(t *testing.T) string {
 		cmd := exec.Command("go", "build", "-o", builtPath, ".")
 		cmd.Dir = moduleRoot()
 		if out, err := cmd.CombinedOutput(); err != nil {
+			builtPath = ""
 			buildErr = fmt.Errorf("go build: %v\n%s", err, out)
 		}
 	})
@@ -94,11 +95,14 @@ func (w *Workspace) MustRun(args ...string) string {
 // RunJSON runs devlog with --json prepended and unmarshals stdout into v.
 func (w *Workspace) RunJSON(v any, args ...string) error {
 	w.t.Helper()
-	stdout, _, err := w.Run(append([]string{"--json"}, args...)...)
+	stdout, stderr, err := w.Run(append([]string{"--json"}, args...)...)
 	if err != nil {
-		return err
+		return fmt.Errorf("devlog %s: %w\nstderr: %s", strings.Join(append([]string{"--json"}, args...), " "), err, stderr)
 	}
-	return json.Unmarshal([]byte(stdout), v)
+	if err := json.Unmarshal([]byte(stdout), v); err != nil {
+		return fmt.Errorf("unmarshal: %w\nstdout: %s", err, stdout)
+	}
+	return nil
 }
 
 // Env returns the isolated environment for subprocess invocation.
