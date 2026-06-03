@@ -1,8 +1,10 @@
 package store
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -123,6 +125,106 @@ func TestSave_AtomicWrite_NoTempFileLeft(t *testing.T) {
 		if filepath.Ext(e.Name()) == ".tmp" {
 			t.Errorf("temp file left behind: %s", e.Name())
 		}
+	}
+}
+
+func TestModify_CreatesEntryIfMissing(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+	date := time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local)
+
+	err := st.Modify(date, func(e *DayEntry) error {
+		e.Sections["notes"] = append(e.Sections["notes"], "hello")
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Modify: %v", err)
+	}
+
+	entry, err := st.Load(date)
+	if err != nil || entry == nil {
+		t.Fatalf("Load after Modify: %v", err)
+	}
+	if len(entry.Sections["notes"]) != 1 || entry.Sections["notes"][0] != "hello" {
+		t.Fatalf("expected [hello], got %v", entry.Sections["notes"])
+	}
+}
+
+func TestModify_PreservesExistingData(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+	date := time.Date(2026, 1, 2, 0, 0, 0, 0, time.Local)
+
+	if err := st.Modify(date, func(e *DayEntry) error {
+		e.Sections["notes"] = append(e.Sections["notes"], "first")
+		return nil
+	}); err != nil {
+		t.Fatalf("first Modify: %v", err)
+	}
+	if err := st.Modify(date, func(e *DayEntry) error {
+		e.Sections["notes"] = append(e.Sections["notes"], "second")
+		return nil
+	}); err != nil {
+		t.Fatalf("second Modify: %v", err)
+	}
+
+	entry, _ := st.Load(date)
+	if len(entry.Sections["notes"]) != 2 {
+		t.Fatalf("expected 2 notes, got %v", entry.Sections["notes"])
+	}
+}
+
+func TestModify_FnErrorAbortsWrite(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+	date := time.Date(2026, 1, 3, 0, 0, 0, 0, time.Local)
+
+	_ = st.Modify(date, func(e *DayEntry) error {
+		e.Sections["notes"] = append(e.Sections["notes"], "initial")
+		return nil
+	})
+
+	err := st.Modify(date, func(e *DayEntry) error {
+		e.Sections["notes"] = append(e.Sections["notes"], "should not persist")
+		return fmt.Errorf("abort")
+	})
+	if err == nil {
+		t.Fatal("expected error from Modify when fn returns error")
+	}
+
+	entry, _ := st.Load(date)
+	if len(entry.Sections["notes"]) != 1 {
+		t.Fatalf("expected 1 note (abort should prevent write), got %v", entry.Sections["notes"])
+	}
+}
+
+func TestModify_ConcurrentWrites(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+	date := time.Date(2026, 1, 6, 0, 0, 0, 0, time.Local)
+
+	const n = 10
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := st.Modify(date, func(e *DayEntry) error {
+				e.Sections["notes"] = append(e.Sections["notes"], "item")
+				return nil
+			}); err != nil {
+				t.Errorf("Modify: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	entry, err := st.Load(date)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(entry.Sections["notes"]) != n {
+		t.Errorf("expected %d notes, got %d (lost updates under concurrency)", n, len(entry.Sections["notes"]))
 	}
 }
 

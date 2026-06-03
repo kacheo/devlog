@@ -50,16 +50,8 @@ func (s *Store) LoadOrCreate(date time.Time) (*DayEntry, error) {
 	return entry, nil
 }
 
-// Save atomically writes entry to its day file using a per-file advisory lock.
-// Creates the journal directory if needed.
-func (s *Store) Save(entry *DayEntry) error {
-	if err := os.MkdirAll(s.dir, 0755); err != nil {
-		return fmt.Errorf("creating journal directory: %w", err)
-	}
-
-	path := s.DayFilePath(entry.Date)
-
-	// Advisory lock via a sidecar .lock file
+// withLock acquires an exclusive advisory lock on path+".lock" and calls fn while holding it.
+func (s *Store) withLock(path string, fn func() error) error {
 	lockPath := path + ".lock"
 	lf, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
@@ -69,17 +61,18 @@ func (s *Store) Save(entry *DayEntry) error {
 		_ = lf.Close()
 		_ = os.Remove(lockPath)
 	}()
-
 	if err := syscall.Flock(int(lf.Fd()), syscall.LOCK_EX); err != nil {
 		return fmt.Errorf("acquiring lock: %w", err)
 	}
 	defer syscall.Flock(int(lf.Fd()), syscall.LOCK_UN) //nolint:errcheck
+	return fn()
+}
 
-	content, err := Serialize(entry)
-	if err != nil {
-		return err
+// saveRaw atomically writes content to path. Assumes the caller holds the lock.
+func (s *Store) saveRaw(path string, content []byte) error {
+	if err := os.MkdirAll(s.dir, 0755); err != nil {
+		return fmt.Errorf("creating journal directory: %w", err)
 	}
-
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, content, 0644); err != nil {
 		return fmt.Errorf("writing temp file: %w", err)
@@ -89,6 +82,49 @@ func (s *Store) Save(entry *DayEntry) error {
 		return fmt.Errorf("renaming temp file: %w", err)
 	}
 	return nil
+}
+
+// Save atomically writes entry to its day file under an exclusive advisory lock.
+func (s *Store) Save(entry *DayEntry) error {
+	path := s.DayFilePath(entry.Date)
+	return s.withLock(path, func() error {
+		content, err := Serialize(entry)
+		if err != nil {
+			return err
+		}
+		return s.saveRaw(path, content)
+	})
+}
+
+// Modify loads, applies fn, and saves a day entry under a single advisory lock, preventing
+// concurrent read-modify-write races. Creates an empty entry if the file is missing.
+// If fn returns an error, the file is not written.
+func (s *Store) Modify(date time.Time, fn func(*DayEntry) error) error {
+	path := s.DayFilePath(date)
+	return s.withLock(path, func() error {
+		var entry *DayEntry
+		data, readErr := os.ReadFile(path)
+		if readErr != nil && !os.IsNotExist(readErr) {
+			return readErr
+		}
+		if os.IsNotExist(readErr) {
+			entry = EmptyEntry(date)
+		} else {
+			var parseErr error
+			entry, parseErr = Parse(data)
+			if parseErr != nil {
+				return parseErr
+			}
+		}
+		if err := fn(entry); err != nil {
+			return err
+		}
+		content, err := Serialize(entry)
+		if err != nil {
+			return err
+		}
+		return s.saveRaw(path, content)
+	})
 }
 
 // ParseDate parses "today", "yesterday", or "YYYY-MM-DD" into a local time.Time at midnight.

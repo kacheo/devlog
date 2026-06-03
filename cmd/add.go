@@ -61,27 +61,15 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("journal not configured: %w\nRun 'devlog init' to set up", err)
 	}
 
-	// Load or create entry
-	entry, err := st.LoadOrCreate(date)
-	if err != nil {
-		return fmt.Errorf("loading day file: %w", err)
-	}
-
-	// Append bullet
-	entry.Sections[targetSection] = append(entry.Sections[targetSection], text)
-
-	// Merge tags (deduplicate)
-	for _, tag := range addTags {
-		if !containsStr(entry.Tags, tag) {
-			entry.Tags = append(entry.Tags, tag)
+	return st.Modify(date, func(entry *store.DayEntry) error {
+		entry.Sections[targetSection] = append(entry.Sections[targetSection], text)
+		for _, tag := range addTags {
+			if !containsStr(entry.Tags, tag) {
+				entry.Tags = append(entry.Tags, tag)
+			}
 		}
-	}
-
-	// Save
-	if err := st.Save(entry); err != nil {
-		return fmt.Errorf("saving day file: %w", err)
-	}
-	return nil
+		return nil
+	})
 }
 
 // resolveDate returns the target date from a string ("today", "yesterday", "YYYY-MM-DD", or "").
