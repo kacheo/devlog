@@ -52,6 +52,9 @@ func (s *Store) AddItem(itemType, text string, deps []string) (*Item, error) {
 	if itemType != "blocker" && itemType != "action_item" {
 		return nil, fmt.Errorf("unknown item type %q: must be blocker or action_item", itemType)
 	}
+	if strings.TrimSpace(text) == "" {
+		return nil, fmt.Errorf("item text cannot be empty")
+	}
 	var added *Item
 	err := s.modifyItems(func(f *itemFile) error {
 		// Resolve dep prefixes to full UUIDs.
@@ -97,14 +100,22 @@ func (s *Store) AddItem(itemType, text string, deps []string) (*Item, error) {
 func (s *Store) ResolveItem(id string) (*Item, error) {
 	var resolved *Item
 	err := s.modifyItems(func(f *itemFile) error {
+		var matches []*Item
 		for i := range f.Items {
 			if matchesID(f.Items[i].ID, id) {
-				f.Items[i].Resolved = true
-				resolved = &f.Items[i]
-				return nil
+				matches = append(matches, &f.Items[i])
 			}
 		}
-		return fmt.Errorf("no item found matching id %q", id)
+		switch len(matches) {
+		case 0:
+			return fmt.Errorf("no item found matching id %q", id)
+		case 1:
+			matches[0].Resolved = true
+			resolved = matches[0]
+			return nil
+		default:
+			return fmt.Errorf("ambiguous id %q: matches %d items", id, len(matches))
+		}
 	})
 	if err != nil {
 		return nil, err
@@ -153,6 +164,9 @@ func newUUID() string {
 
 // matchesID returns true if candidate equals id exactly or starts with it (8-char prefix).
 func matchesID(candidate, id string) bool {
+	if id == "" {
+		return false
+	}
 	return candidate == id || (len(id) <= len(candidate) && candidate[:len(id)] == id)
 }
 
@@ -191,38 +205,32 @@ func findItemByID(items []Item, id string) *Item {
 }
 
 // checkNoCycle verifies that adding newID → deps does not introduce a cycle.
-// Builds a graph of existing items plus the hypothetical new node, then runs DFS.
+// Builds a graph of existing items plus the hypothetical new node, then runs DFS from newID.
+// Since newID is freshly generated no existing item points to it, making this a no-op for
+// AddItem. Kept as a correct guard if deps ever become mutable.
 func checkNoCycle(items []Item, newID string, deps []string) error {
-	// adjacency: item ID → list of dependency IDs it points to
 	adj := make(map[string][]string, len(items)+1)
 	for _, item := range items {
 		adj[item.ID] = item.Dependencies
 	}
 	adj[newID] = deps
 
-	// DFS from newID; if we ever revisit newID we found a cycle.
 	visited := make(map[string]bool)
 	var dfs func(cur string) bool
 	dfs = func(cur string) bool {
-		if cur == newID {
-			return true // cycle found
-		}
 		if visited[cur] {
 			return false
 		}
 		visited[cur] = true
 		for _, next := range adj[cur] {
-			if dfs(next) {
+			if next == newID || dfs(next) {
 				return true
 			}
 		}
 		return false
 	}
-	for _, dep := range deps {
-		visited = make(map[string]bool)
-		if dfs(dep) {
-			return fmt.Errorf("dependency %s would create a cycle", dep[:8])
-		}
+	if dfs(newID) {
+		return fmt.Errorf("dependencies would create a cycle")
 	}
 	return nil
 }

@@ -39,7 +39,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	if addSection != "" {
 		canonical, ok := store.NormalizeSection(addSection)
 		if !ok {
-			allSections := append(store.KnownSections, store.GlobalSections...)
+			allSections := store.AllSections()
 			return fmt.Errorf("unknown section %q; valid sections: %s",
 				addSection, strings.Join(allSections, ", "))
 		}

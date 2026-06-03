@@ -279,7 +279,7 @@ func filteredEntry(entry *store.DayEntry) *store.DayEntry {
 }
 
 func validateShowSections(sections []string) error {
-	allSections := append(store.KnownSections, store.GlobalSections...)
+	allSections := store.AllSections()
 	for _, s := range sections {
 		if _, ok := store.NormalizeSection(s); !ok {
 			return fmt.Errorf("unknown section %q: valid sections are %s",

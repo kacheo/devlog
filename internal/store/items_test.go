@@ -243,3 +243,48 @@ func TestIsGlobalSection(t *testing.T) {
 		t.Error("diary should NOT be global")
 	}
 }
+
+func TestMatchesID_EmptyString(t *testing.T) {
+	if matchesID("deadbeef-cafe-4000-8000-112233445566", "") {
+		t.Error("empty id must not match any candidate")
+	}
+	if matchesID("", "") {
+		t.Error("empty id must not match empty candidate")
+	}
+}
+
+func TestAddItem_EmptyText(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	_, err := st.AddItem("blocker", "", nil)
+	if err == nil {
+		t.Error("expected error for empty text")
+	}
+	_, err = st.AddItem("blocker", "   ", nil)
+	if err == nil {
+		t.Error("expected error for whitespace-only text")
+	}
+}
+
+func TestResolveItem_AmbiguousPrefix(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	// Write two items with a shared 8-char prefix directly via modifyItems.
+	err := st.modifyItems(func(f *itemFile) error {
+		f.Items = []Item{
+			{ID: "aaaabbbb-0000-4000-8000-111122223333", Type: "blocker", Text: "first", Dependencies: []string{}},
+			{ID: "aaaabbbb-1111-4000-8000-444455556666", Type: "blocker", Text: "second", Dependencies: []string{}},
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	_, err = st.ResolveItem("aaaabbbb")
+	if err == nil {
+		t.Error("expected ambiguous id error")
+	}
+}

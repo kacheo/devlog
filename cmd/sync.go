@@ -100,7 +100,10 @@ func runSync(cmd *cobra.Command, args []string) error {
 		st, stErr := store.New(cfg.Journal.Dir)
 		var blockers, actionItems []store.Item
 		if stErr == nil {
-			all, _ := st.LoadAllItems()
+			all, itemsErr := st.LoadAllItems()
+			if itemsErr != nil {
+				return fmt.Errorf("loading items: %w", itemsErr)
+			}
 			unresolved := store.FilterUnresolved(all)
 			blockers, actionItems = store.SplitByType(unresolved)
 		}
