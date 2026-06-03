@@ -97,14 +97,24 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	if !syncQuiet {
+		st, stErr := store.New(cfg.Journal.Dir)
+		var blockers, actionItems []store.Item
+		if stErr == nil {
+			all, itemsErr := st.LoadAllItems()
+			if itemsErr != nil {
+				return fmt.Errorf("loading items: %w", itemsErr)
+			}
+			unresolved := store.FilterUnresolved(all)
+			blockers, actionItems = store.SplitByType(unresolved)
+		}
 		if globalJSON {
-			out, err := render.ShowJSON(entry)
+			out, err := render.ShowJSON(entry, blockers, actionItems)
 			if err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), string(out))
 		} else {
-			render.ShowTerminal(entry, cmd.OutOrStdout())
+			render.ShowTerminal(entry, blockers, actionItems, cmd.OutOrStdout())
 		}
 	}
 	return nil

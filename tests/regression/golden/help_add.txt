@@ -1,9 +1,10 @@
-Append a bullet to today's journal
+Append a bullet to today's journal, or add a global blocker/action item
 
 Usage:
   devlog add "text" [flags]
 
 Flags:
+      --dep stringArray   dependency UUID (8-char prefix or full; repeatable)
   -h, --help              help for add
       --section string    section to append to (default: notes)
       --tag stringArray   add a tag to today's frontmatter (repeatable)
