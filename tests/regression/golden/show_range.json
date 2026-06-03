@@ -1,0 +1,40 @@
+[
+  {
+    "date": "2026-01-15",
+    "sections": {
+      "action_items": [],
+      "blockers": [
+        "waiting on DevOps to provision staging DB"
+      ],
+      "commits": [],
+      "notes": [
+        "fixed the OAuth token refresh loop",
+        "reviewed PR for rate limiter"
+      ],
+      "prs": []
+    },
+    "tags": [
+      "auth",
+      "backend"
+    ],
+    "version": "1"
+  },
+  {
+    "date": "2026-01-16",
+    "sections": {
+      "action_items": [
+        "write runbook for cache failover"
+      ],
+      "blockers": [],
+      "commits": [],
+      "notes": [
+        "deployed new cache layer"
+      ],
+      "prs": []
+    },
+    "tags": [
+      "infra"
+    ],
+    "version": "1"
+  }
+]

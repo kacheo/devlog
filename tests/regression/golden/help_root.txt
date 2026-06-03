@@ -1,0 +1,26 @@
+devlog keeps a structured daily work journal as plain markdown files.
+It auto-imports git commits and GitHub PRs, and outputs structured JSON for AI agents.
+
+Usage:
+  devlog [command]
+
+Available Commands:
+  add         Append a bullet to today's journal
+  completion  Generate the autocompletion script for the specified shell
+  edit        Open a day file in $EDITOR
+  help        Help about any command
+  init        First-time setup: create config and optionally install git hooks
+  rm          Remove a bullet from a section by its 1-based index
+  search      Full-text search across all journal entries
+  show        Print journal entries
+  sync        Import today's commits and PRs from configured repos
+  update      Replace a bullet in a section by its 1-based index
+  workspace   Manage workspace directories for auto-tracking
+
+Flags:
+      --date string   target date (YYYY-MM-DD)
+  -h, --help          help for devlog
+      --json          emit structured JSON output
+  -v, --version       version for devlog
+
+Use "devlog [command] --help" for more information about a command.
