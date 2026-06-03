@@ -30,17 +30,24 @@ func TestAdd_BasicNote(t *testing.T) {
 }
 
 // TestAdd_WithSection verifies --section routes the bullet to the right section.
+// A note is added first so a day file exists for show --json to render.
+// Blockers are global items ({id, text, resolved, dependencies}), not day-file strings.
 func TestAdd_WithSection(t *testing.T) {
 	t.Parallel()
 	ws := testharness.New(t)
+	ws.MustRun("add", "daily standup done") // create day file
 	ws.MustRun("add", "--section", "blockers", "waiting on DB migration")
 	var v map[string]any
 	if err := ws.RunJSON(&v, "show", "today"); err != nil {
 		t.Fatalf("show --json: %v", err)
 	}
 	blockers := v["sections"].(map[string]any)["blockers"].([]any)
-	if len(blockers) != 1 || blockers[0] != "waiting on DB migration" {
-		t.Errorf("blockers = %v", blockers)
+	if len(blockers) != 1 {
+		t.Fatalf("want 1 blocker, got %d: %v", len(blockers), blockers)
+	}
+	b := blockers[0].(map[string]any)
+	if b["text"] != "waiting on DB migration" {
+		t.Errorf("blocker text = %v, want 'waiting on DB migration'", b["text"])
 	}
 }
 
@@ -248,17 +255,19 @@ func TestSearch_JSONOutput(t *testing.T) {
 }
 
 // TestSearch_SectionFilter verifies --section limits search scope.
+// Uses notes (not blockers) because blockers are now global items in items.yaml
+// and are not indexed by the search command's day-file scan.
 func TestSearch_SectionFilter(t *testing.T) {
 	t.Parallel()
 	ws := testharness.New(t)
-	ws.MustRun("add", "--date", "2026-01-15", "--section", "blockers", "oauth dependency blocked")
-	ws.MustRun("add", "--date", "2026-01-15", "unrelated note")
+	ws.MustRun("add", "--date", "2026-01-15", "oauth dependency detail")
+	ws.MustRun("add", "--date", "2026-01-16", "unrelated note")
 	var results []map[string]any
-	if err := ws.RunJSON(&results, "search", "--section", "blockers", "oauth"); err != nil {
-		t.Fatalf("search --json --section blockers: %v", err)
+	if err := ws.RunJSON(&results, "search", "--section", "notes", "oauth"); err != nil {
+		t.Fatalf("search --json --section notes: %v", err)
 	}
 	if len(results) == 0 {
-		t.Fatal("expected match in blockers section")
+		t.Fatal("expected match in notes section")
 	}
 }
 

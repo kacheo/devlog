@@ -9,7 +9,7 @@ import (
 )
 
 // SearchableSections lists all valid section names accepted by SearchOpts.Sections.
-var SearchableSections = append(append([]string{}, KnownSections...), "commits", "prs")
+var SearchableSections = append(append(append([]string{}, KnownSections...), GlobalSections...), "commits", "prs")
 
 // SearchOpts controls which day files and sections are scanned.
 type SearchOpts struct {
@@ -26,7 +26,7 @@ type SearchResult struct {
 	Line    string `json:"line"`
 }
 
-// Search scans all YYYY-MM-DD.md files in the store directory and returns lines
+// Search scans all YYYY-MM-DD.md files plus items.yaml and returns lines
 // containing opts.Query (case-insensitive). opts.Sections restricts which sections
 // are searched; an unknown section name returns an error.
 func (s *Store) Search(opts SearchOpts) ([]SearchResult, error) {
@@ -34,16 +34,32 @@ func (s *Store) Search(opts SearchOpts) ([]SearchResult, error) {
 		return nil, err
 	}
 
+	query := strings.ToLower(opts.Query)
+	var results []SearchResult
+
+	// Search global items when blockers or action_items are in scope
+	searchAll := len(opts.Sections) == 0
+	if searchAll || containsSection(opts.Sections, "blockers") || containsSection(opts.Sections, "action_items") {
+		items, err := s.LoadAllItems()
+		if err != nil {
+			return nil, fmt.Errorf("loading items for search: %w", err)
+		}
+		for _, item := range items {
+			if searchAll || containsSection(opts.Sections, item.Type+"s") || containsSection(opts.Sections, item.Type) {
+				if strings.Contains(strings.ToLower(item.Text), query) {
+					results = append(results, SearchResult{Date: "global", Section: item.Type + "s", Line: item.Text})
+				}
+			}
+		}
+	}
+
 	dirEntries, err := os.ReadDir(s.dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return results, nil
 		}
 		return nil, err
 	}
-
-	query := strings.ToLower(opts.Query)
-	var results []SearchResult
 
 	for _, de := range dirEntries {
 		if de.IsDir() {

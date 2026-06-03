@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -70,6 +71,14 @@ func prettyJSON(t *testing.T, raw string) string {
 	return string(out)
 }
 
+// uuidRe matches UUID4 strings in JSON output so they can be replaced with a stable placeholder.
+var uuidRe = regexp.MustCompile(`"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"`)
+
+// normalizeUUIDs replaces UUID4 values in JSON with "<uuid>" so golden files are deterministic.
+func normalizeUUIDs(s string) string {
+	return uuidRe.ReplaceAllString(s, `"<uuid>"`)
+}
+
 // seedWorkspace populates a workspace with fixed-date entries for all regression scenarios.
 func seedWorkspace(t *testing.T, ws *testharness.Workspace) {
 	t.Helper()
@@ -91,7 +100,7 @@ func TestRegression_ShowSingleDay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("show --json 2026-01-15: %v", err)
 	}
-	checkOrUpdate(t, "show_single_day.json", prettyJSON(t, strings.TrimSpace(stdout)))
+	checkOrUpdate(t, "show_single_day.json", normalizeUUIDs(prettyJSON(t, strings.TrimSpace(stdout))))
 }
 
 // TestRegression_ShowRange pins show --json --from/--until for a two-day range.
@@ -104,7 +113,7 @@ func TestRegression_ShowRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("show --json --from/--until: %v", err)
 	}
-	checkOrUpdate(t, "show_range.json", prettyJSON(t, strings.TrimSpace(stdout)))
+	checkOrUpdate(t, "show_range.json", normalizeUUIDs(prettyJSON(t, strings.TrimSpace(stdout))))
 }
 
 // TestRegression_SearchJSON pins search --json output for a known query.
