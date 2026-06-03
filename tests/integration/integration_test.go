@@ -370,7 +370,7 @@ func TestInit_InstallsHook(t *testing.T) {
 
 	// installHook is the internal mechanism; call it directly via the exported
 	// helper path by writing the hook ourselves to match what devlog init does.
-	if err := installHookViaDevlog(ws, repoDir, hookPath); err != nil {
+	if err := installHookViaDevlog(ws, repoDir); err != nil {
 		t.Fatalf("hook installation: %v", err)
 	}
 
@@ -389,11 +389,12 @@ func TestInit_InstallsHook(t *testing.T) {
 
 // installHookViaDevlog drives devlog init interactively to install the hook,
 // using an isolated XDG_CONFIG_HOME so it does not touch the real user config.
-func installHookViaDevlog(ws *testharness.Workspace, repoDir, hookPath string) error {
+func installHookViaDevlog(ws *testharness.Workspace, repoDir string) error {
 	xdgDir, err := os.MkdirTemp("", "devlog-xdg-*")
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(xdgDir)
 
 	// Write a minimal config that points journal.dir at ws.Dir and registers repoDir.
 	cfgDir := filepath.Join(xdgDir, "devlog")

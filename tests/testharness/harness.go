@@ -73,6 +73,7 @@ func New(t *testing.T) *Workspace {
 func (w *Workspace) Run(args ...string) (stdout, stderr string, err error) {
 	w.t.Helper()
 	cmd := exec.Command(w.Binary, args...)
+	cmd.Dir = w.Dir
 	cmd.Env = w.Env()
 	var outBuf, errBuf bytes.Buffer
 	cmd.Stdout = &outBuf
