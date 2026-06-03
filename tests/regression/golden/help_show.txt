@@ -1,0 +1,16 @@
+Print journal entries
+
+Usage:
+  devlog show [today|yesterday|YYYY-MM-DD|week] [flags]
+
+Flags:
+      --from string       start of date range (inclusive)
+  -h, --help              help for show
+      --repo string       include only entries with commits/PRs from this repo
+      --section strings   render only these sections: notes, blockers, action_items (repeatable or comma-separated)
+      --tag string        include only entries with this tag
+      --until string      end of date range (inclusive), defaults to today
+
+Global Flags:
+      --date string   target date (YYYY-MM-DD)
+      --json          emit structured JSON output
