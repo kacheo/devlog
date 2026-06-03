@@ -20,7 +20,7 @@ coverage: test
 clean:
 	rm -f coverage.out
 
-test-integration: ## Run subprocess integration tests (compiles devlog binary first)
+test-integration: ## Run subprocess integration tests (binary built on demand by testharness; set DEVLOG_TEST_BINARY to skip)
 	go test -tags=integration -race -timeout=2m -v ./tests/integration/...
 
 test-regression: ## Run golden-file regression tests

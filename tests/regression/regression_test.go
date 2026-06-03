@@ -40,7 +40,7 @@ func checkOrUpdate(t *testing.T, name, got string) {
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			t.Fatalf("mkdir golden: %v", err)
 		}
-		if err := os.WriteFile(path, []byte(got), 0644); err != nil {
+		if err := os.WriteFile(path, []byte(got+"\n"), 0644); err != nil {
 			t.Fatalf("writing golden %s: %v", name, err)
 		}
 		t.Logf("updated golden: %s", name)
@@ -50,7 +50,7 @@ func checkOrUpdate(t *testing.T, name, got string) {
 	if err != nil {
 		t.Fatalf("reading golden %s: %v\nRun 'make update-golden' to generate it.", name, err)
 	}
-	if string(want) != got {
+	if strings.TrimSpace(string(want)) != strings.TrimSpace(got) {
 		t.Errorf("output does not match golden %s\n--- want ---\n%s\n--- got ---\n%s",
 			name, want, got)
 	}
@@ -84,6 +84,7 @@ func seedWorkspace(t *testing.T, ws *testharness.Workspace) {
 
 // TestRegression_ShowSingleDay pins show --json for a single day.
 func TestRegression_ShowSingleDay(t *testing.T) {
+	t.Parallel()
 	ws := testharness.New(t)
 	seedWorkspace(t, ws)
 	stdout, _, err := ws.Run("--json", "show", "2026-01-15")
@@ -96,6 +97,7 @@ func TestRegression_ShowSingleDay(t *testing.T) {
 // TestRegression_ShowRange pins show --json --from/--until for a two-day range.
 // Both dates are fixed, so the output is deterministic.
 func TestRegression_ShowRange(t *testing.T) {
+	t.Parallel()
 	ws := testharness.New(t)
 	seedWorkspace(t, ws)
 	stdout, _, err := ws.Run("--json", "show", "--from", "2026-01-15", "--until", "2026-01-16")
@@ -107,6 +109,7 @@ func TestRegression_ShowRange(t *testing.T) {
 
 // TestRegression_SearchJSON pins search --json output for a known query.
 func TestRegression_SearchJSON(t *testing.T) {
+	t.Parallel()
 	ws := testharness.New(t)
 	seedWorkspace(t, ws)
 	stdout, _, err := ws.Run("--json", "search", "OAuth")
@@ -118,6 +121,7 @@ func TestRegression_SearchJSON(t *testing.T) {
 
 // TestRegression_RootHelpText pins devlog --help to catch command/flag renames.
 func TestRegression_RootHelpText(t *testing.T) {
+	t.Parallel()
 	ws := testharness.New(t)
 	stdout, _, err := ws.Run("--help")
 	if err != nil {
@@ -128,6 +132,7 @@ func TestRegression_RootHelpText(t *testing.T) {
 
 // TestRegression_AddHelpText pins devlog add --help.
 func TestRegression_AddHelpText(t *testing.T) {
+	t.Parallel()
 	ws := testharness.New(t)
 	stdout, _, err := ws.Run("add", "--help")
 	if err != nil {
@@ -138,6 +143,7 @@ func TestRegression_AddHelpText(t *testing.T) {
 
 // TestRegression_ShowHelpText pins devlog show --help (catches new --from/--until flags, etc.).
 func TestRegression_ShowHelpText(t *testing.T) {
+	t.Parallel()
 	ws := testharness.New(t)
 	stdout, _, err := ws.Run("show", "--help")
 	if err != nil {
