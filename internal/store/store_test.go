@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -194,6 +195,36 @@ func TestModify_FnErrorAbortsWrite(t *testing.T) {
 	entry, _ := st.Load(date)
 	if len(entry.Sections["notes"]) != 1 {
 		t.Fatalf("expected 1 note (abort should prevent write), got %v", entry.Sections["notes"])
+	}
+}
+
+func TestModify_ConcurrentWrites(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+	date := time.Date(2026, 1, 6, 0, 0, 0, 0, time.Local)
+
+	const n = 10
+	var wg sync.WaitGroup
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := st.Modify(date, func(e *DayEntry) error {
+				e.Sections["notes"] = append(e.Sections["notes"], "item")
+				return nil
+			}); err != nil {
+				t.Errorf("Modify: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	entry, err := st.Load(date)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(entry.Sections["notes"]) != n {
+		t.Errorf("expected %d notes, got %d (lost updates under concurrency)", n, len(entry.Sections["notes"]))
 	}
 }
 

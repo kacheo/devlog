@@ -363,3 +363,35 @@ func TestNormalizeSection_CommitsPRsRemoved(t *testing.T) {
 		}
 	}
 }
+
+func TestParse_ActionItems(t *testing.T) {
+	raw := []byte(`---
+date: "2026-01-07"
+tags: []
+commits: []
+prs: []
+---
+
+## Notes
+
+## Action Items
+- review PR
+- update docs
+
+## Blockers
+`)
+	entry, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	items := entry.Sections["action_items"]
+	if len(items) != 2 {
+		t.Fatalf("expected 2 action_items, got %v", items)
+	}
+	if items[0] != "review PR" {
+		t.Errorf("items[0] = %q, want %q", items[0], "review PR")
+	}
+	if items[1] != "update docs" {
+		t.Errorf("items[1] = %q, want %q", items[1], "update docs")
+	}
+}
