@@ -40,7 +40,10 @@ func (s *Store) Search(opts SearchOpts) ([]SearchResult, error) {
 	// Search global items when blockers or action_items are in scope
 	searchAll := len(opts.Sections) == 0
 	if searchAll || containsSection(opts.Sections, "blockers") || containsSection(opts.Sections, "action_items") {
-		items, _ := s.LoadAllItems()
+		items, err := s.LoadAllItems()
+		if err != nil {
+			return nil, fmt.Errorf("loading items for search: %w", err)
+		}
 		for _, item := range items {
 			if searchAll || containsSection(opts.Sections, item.Type+"s") || containsSection(opts.Sections, item.Type) {
 				if strings.Contains(strings.ToLower(item.Text), query) {

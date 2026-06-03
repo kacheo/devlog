@@ -45,6 +45,12 @@ var KnownSections = []string{"notes"}
 // GlobalSections are stored in items.yaml, not in day files.
 var GlobalSections = []string{"blockers", "action_items"}
 
+// AllSections returns all known section names (day-file + global) as a new slice.
+func AllSections() []string {
+	out := make([]string, 0, len(KnownSections)+len(GlobalSections))
+	return append(append(out, KnownSections...), GlobalSections...)
+}
+
 func NormalizeSection(s string) (string, bool) {
 	switch strings.ToLower(s) {
 	case "note", "notes":
