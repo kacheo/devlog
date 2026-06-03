@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -91,5 +93,74 @@ func TestRmCmd_UnknownSection_Errors(t *testing.T) {
 	err := rootCmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown section, got nil")
+	}
+}
+
+func TestRmCmd_PrintsConfirmation(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	globalDate = ""
+
+	addSection = ""
+	addTags = nil
+	rootCmd.SetArgs([]string{"add", "first"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("add first: %v", err)
+	}
+	addSection = ""
+	addTags = nil
+	rootCmd.SetArgs([]string{"add", "second"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("add second: %v", err)
+	}
+
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	t.Cleanup(func() { rootCmd.SetOut(os.Stdout) })
+
+	rmSection = "notes"
+	rmID = 2
+	rootCmd.SetArgs([]string{"rm", "--section", "notes", "--id", "2"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("rm: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "Removed [2] from notes.") {
+		t.Errorf("expected confirmation message, got: %q", buf.String())
+	}
+}
+
+func TestRmCmd_EmptySection_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	rmSection = "notes"
+	rmID = 1
+	globalDate = ""
+
+	rootCmd.SetArgs([]string{"rm", "--section", "notes", "--id", "1"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error when section has 0 items, got nil")
+	}
+}
+
+func TestRmCmd_ZeroID_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	globalDate = ""
+
+	addSection = ""
+	addTags = nil
+	rootCmd.SetArgs([]string{"add", "some note"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	rmSection = "notes"
+	rmID = 0
+	rootCmd.SetArgs([]string{"rm", "--section", "notes", "--id", "0"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for id=0, got nil")
 	}
 }

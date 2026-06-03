@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -87,5 +89,33 @@ func TestUpdateCmd_UnknownSection_Errors(t *testing.T) {
 	err := rootCmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown section, got nil")
+	}
+}
+
+func TestUpdateCmd_PrintsConfirmation(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	globalDate = ""
+
+	addSection = ""
+	addTags = nil
+	rootCmd.SetArgs([]string{"add", "original"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	t.Cleanup(func() { rootCmd.SetOut(os.Stdout) })
+
+	updateSection = "notes"
+	updateID = 1
+	rootCmd.SetArgs([]string{"update", "--section", "notes", "--id", "1", "revised"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "Updated [1] in notes.") {
+		t.Errorf("expected confirmation message, got: %q", buf.String())
 	}
 }
