@@ -196,31 +196,47 @@ func TestShowCmd_SectionFilter_Today(t *testing.T) {
 	globalDate = ""
 	globalJSON = false
 	resetShowFlags()
+	t.Cleanup(resetShowFlags)
 
 	st, _ := store.New(dir)
 
 	entry := store.EmptyEntry(time.Now())
 	entry.Sections["notes"] = []string{"a note"}
-	entry.Sections["blockers"] = []string{"a blocker"}
 	if err := st.Save(entry); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := st.AddItem("blocker", "a blocker", []string{}); err != nil {
+		t.Fatalf("AddItem: %v", err)
+	}
 
+	// Without section filter: both note and global blocker appear
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
-	showSections = []string{"notes"}
 	rootCmd.SetArgs([]string{"show", "today"})
 	if err := rootCmd.Execute(); err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
-	resetShowFlags()
-
 	out := buf.String()
 	if !strings.Contains(out, "a note") {
-		t.Errorf("expected notes section in output, got: %q", out)
+		t.Errorf("expected note in unfiltered output: %q", out)
+	}
+	if !strings.Contains(out, "a blocker") {
+		t.Errorf("expected global blocker in unfiltered output: %q", out)
+	}
+
+	// With section filter: only notes; global blocker absent
+	buf.Reset()
+	showSections = []string{"notes"}
+	rootCmd.SetArgs([]string{"show", "today"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute() with section filter error = %v", err)
+	}
+	out = buf.String()
+	if !strings.Contains(out, "a note") {
+		t.Errorf("expected notes section in filtered output: %q", out)
 	}
 	if strings.Contains(out, "a blocker") {
-		t.Errorf("blockers should be filtered out, got: %q", out)
+		t.Errorf("blockers should be filtered out: %q", out)
 	}
 }
 
