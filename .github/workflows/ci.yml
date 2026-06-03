@@ -14,18 +14,22 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.12.2
       - name: Test with coverage
         run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
       - name: Enforce coverage threshold
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $3}' | sed 's/%//')
+          if [ -z "$COVERAGE" ]; then
+            echo "❌ Could not extract coverage total — coverage.out may be empty"
+            exit 1
+          fi
           echo "Coverage: ${COVERAGE}%"
-          if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+          if awk "BEGIN {exit ($COVERAGE >= 70)}"; then
             echo "❌ Coverage ${COVERAGE}% is below 70% threshold"
             exit 1
           fi
           echo "✅ Coverage ${COVERAGE}% meets threshold"
-      - name: Lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          golangci-lint run ./...
