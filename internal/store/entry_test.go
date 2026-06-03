@@ -144,10 +144,9 @@ func TestNormalizeSection(t *testing.T) {
 		{"blockers", "blockers", true},
 		{"blocker", "blockers", true},
 		{"Blockers", "blockers", true},
-		{"commits", "commits", true},
-		{"commit", "commits", true},
-		{"prs", "prs", true},
-		{"pr", "prs", true},
+		{"action_items", "action_items", true},
+		{"action_item", "action_items", true},
+		{"action", "action_items", true},
 		{"unknown", "", false},
 		{"diary", "", false},
 		{"", "", false},
@@ -202,7 +201,7 @@ func TestSerialize_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestSerialize_CommitBulletFormat(t *testing.T) {
+func TestSerialize_CommitsNotInBody(t *testing.T) {
 	date := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
 	entry := EmptyEntry(date)
 	entry.Commits = []Commit{{SHA: "abc1234", Message: "fix: auth bug", Repo: "api-server"}}
@@ -210,12 +209,16 @@ func TestSerialize_CommitBulletFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Serialize() error = %v", err)
 	}
-	if !bytes.Contains(out, []byte("- abc1234 fix: auth bug (api-server)")) {
-		t.Errorf("Commits section missing expected bullet.\nGot:\n%s", out)
+	if bytes.Contains(out, []byte("## Commits")) {
+		t.Errorf("Serialize should not emit ## Commits body section")
+	}
+	// Commits still appear in frontmatter
+	if !bytes.Contains(out, []byte("sha: abc1234")) {
+		t.Errorf("Commits should still appear in frontmatter")
 	}
 }
 
-func TestSerialize_PRBulletFormat(t *testing.T) {
+func TestSerialize_PRsNotInBody(t *testing.T) {
 	date := time.Date(2026, 6, 1, 0, 0, 0, 0, time.Local)
 	entry := EmptyEntry(date)
 	entry.PRs = []PR{{Number: 142, Title: "Add rate limiter", State: "merged", Repo: "api-server"}}
@@ -223,8 +226,12 @@ func TestSerialize_PRBulletFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Serialize() error = %v", err)
 	}
-	if !bytes.Contains(out, []byte("- #142 Add rate limiter [merged] (api-server)")) {
-		t.Errorf("PRs section missing expected bullet.\nGot:\n%s", out)
+	if bytes.Contains(out, []byte("## PRs")) {
+		t.Errorf("Serialize should not emit ## PRs body section")
+	}
+	// PRs still appear in frontmatter
+	if !bytes.Contains(out, []byte("number: 142")) {
+		t.Errorf("PRs should still appear in frontmatter")
 	}
 }
 
@@ -291,5 +298,100 @@ func TestSerialize_PROMitsEmptyURL(t *testing.T) {
 	}
 	if bytes.Contains(out, []byte("url:")) {
 		t.Errorf("frontmatter should omit empty url field.\nGot:\n%s", out)
+	}
+}
+
+func TestKnownSections_NoCommitsPRs(t *testing.T) {
+	for _, s := range KnownSections {
+		if s == "commits" || s == "prs" {
+			t.Errorf("KnownSections still contains %q — should be removed", s)
+		}
+	}
+}
+
+func TestKnownSections_HasActionItems(t *testing.T) {
+	found := false
+	for _, s := range KnownSections {
+		if s == "action_items" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("KnownSections missing action_items")
+	}
+}
+
+func TestActionItems_RoundTrip(t *testing.T) {
+	e := EmptyEntry(time.Date(2026, 1, 4, 0, 0, 0, 0, time.Local))
+	e.Sections["action_items"] = []string{"review PR", "update docs"}
+
+	data, err := Serialize(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("## Action Items")) {
+		t.Error("expected ## Action Items heading in serialized output")
+	}
+
+	parsed, err := Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Sections["action_items"]) != 2 {
+		t.Fatalf("expected 2 action_items, got %v", parsed.Sections["action_items"])
+	}
+	if parsed.Sections["action_items"][0] != "review PR" {
+		t.Errorf("expected 'review PR', got %q", parsed.Sections["action_items"][0])
+	}
+}
+
+func TestNormalizeSection_ActionItems(t *testing.T) {
+	cases := []string{"action", "action_item", "action_items", "action items", "Action Items"}
+	for _, c := range cases {
+		got, ok := NormalizeSection(c)
+		if !ok || got != "action_items" {
+			t.Errorf("NormalizeSection(%q) = %q, %v; want action_items, true", c, got, ok)
+		}
+	}
+}
+
+func TestNormalizeSection_CommitsPRsRemoved(t *testing.T) {
+	for _, s := range []string{"commit", "commits", "pr", "prs"} {
+		_, ok := NormalizeSection(s)
+		if ok {
+			t.Errorf("NormalizeSection(%q) should return false after removing commits/prs", s)
+		}
+	}
+}
+
+func TestParse_ActionItems(t *testing.T) {
+	raw := []byte(`---
+date: "2026-01-07"
+tags: []
+commits: []
+prs: []
+---
+
+## Notes
+
+## Action Items
+- review PR
+- update docs
+
+## Blockers
+`)
+	entry, err := Parse(raw)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	items := entry.Sections["action_items"]
+	if len(items) != 2 {
+		t.Fatalf("expected 2 action_items, got %v", items)
+	}
+	if items[0] != "review PR" {
+		t.Errorf("items[0] = %q, want %q", items[0], "review PR")
+	}
+	if items[1] != "update docs" {
+		t.Errorf("items[1] = %q, want %q", items[1], "update docs")
 	}
 }
