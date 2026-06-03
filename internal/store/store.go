@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -11,6 +12,7 @@ import (
 // Store manages day files in the journal directory.
 type Store struct {
 	dir string
+	mu  sync.Mutex
 }
 
 // New creates a Store rooted at dir. Returns an error if dir is empty.
@@ -51,7 +53,11 @@ func (s *Store) LoadOrCreate(date time.Time) (*DayEntry, error) {
 }
 
 // withLock acquires an exclusive advisory lock on path+".lock" and calls fn while holding it.
+// s.mu serializes goroutines within the same process; flock handles cross-process exclusion.
 func (s *Store) withLock(path string, fn func() error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	lockPath := path + ".lock"
 	lf, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
