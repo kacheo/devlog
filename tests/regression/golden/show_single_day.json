@@ -1,9 +1,21 @@
 {
   "date": "2026-01-15",
   "sections": {
-    "action_items": [],
+    "action_items": [
+      {
+        "dependencies": [],
+        "id": "<uuid>",
+        "resolved": false,
+        "text": "write runbook for cache failover"
+      }
+    ],
     "blockers": [
-      "waiting on DevOps to provision staging DB"
+      {
+        "dependencies": [],
+        "id": "<uuid>",
+        "resolved": false,
+        "text": "waiting on DevOps to provision staging DB"
+      }
     ],
     "commits": [],
     "notes": [

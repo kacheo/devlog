@@ -2,9 +2,21 @@
   {
     "date": "2026-01-15",
     "sections": {
-      "action_items": [],
+      "action_items": [
+        {
+          "dependencies": [],
+          "id": "<uuid>",
+          "resolved": false,
+          "text": "write runbook for cache failover"
+        }
+      ],
       "blockers": [
-        "waiting on DevOps to provision staging DB"
+        {
+          "dependencies": [],
+          "id": "<uuid>",
+          "resolved": false,
+          "text": "waiting on DevOps to provision staging DB"
+        }
       ],
       "commits": [],
       "notes": [
@@ -23,9 +35,21 @@
     "date": "2026-01-16",
     "sections": {
       "action_items": [
-        "write runbook for cache failover"
+        {
+          "dependencies": [],
+          "id": "<uuid>",
+          "resolved": false,
+          "text": "write runbook for cache failover"
+        }
       ],
-      "blockers": [],
+      "blockers": [
+        {
+          "dependencies": [],
+          "id": "<uuid>",
+          "resolved": false,
+          "text": "waiting on DevOps to provision staging DB"
+        }
+      ],
       "commits": [],
       "notes": [
         "deployed new cache layer"

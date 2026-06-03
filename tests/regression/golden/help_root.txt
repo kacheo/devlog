@@ -5,11 +5,12 @@ Usage:
   devlog [command]
 
 Available Commands:
-  add         Append a bullet to today's journal
+  add         Append a bullet to today's journal, or add a global blocker/action item
   completion  Generate the autocompletion script for the specified shell
   edit        Open a day file in $EDITOR
   help        Help about any command
   init        First-time setup: create config and optionally install git hooks
+  resolve     Mark a blocker or action item as resolved
   rm          Remove a bullet from a section by its 1-based index
   search      Full-text search across all journal entries
   show        Print journal entries
