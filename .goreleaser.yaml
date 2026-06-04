@@ -32,6 +32,19 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+brews:
+  - name: devlog
+    homepage: "https://github.com/kacheo/devlog"
+    description: "Local-first engineer journal — git commits and PRs auto-imported"
+    license: "Apache-2.0"
+    repository:
+      owner: kacheo
+      name: homebrew-devlog
+    install: |
+      bin.install "devlog"
+    test: |
+      system "#{bin}/devlog", "--version"
+
 changelog:
   sort: asc
   filters:

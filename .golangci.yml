@@ -10,6 +10,7 @@ linters:
     - staticcheck
     - govet
     - nolintlint
+    - gosec
 
   settings:
     nolintlint:
@@ -23,3 +24,16 @@ linters:
       - path: _test\.go
         linters: [errcheck]
         text: 'Error return value of .*(Chmod|Remove).* is not checked'
+      # G204: exec.Command with variable args — all callers use user-configured paths
+      # (git repo paths, gh repo slugs, editor from $EDITOR/$VISUAL), not untrusted input.
+      - linters: [gosec]
+        text: "G204:"
+      # G304/G703: file paths from user config are not untrusted input.
+      - linters: [gosec]
+        text: "G304:"
+      - linters: [gosec]
+        text: "G703:"
+      # Test files: permission values in temp dirs and unhandled test-server writes are not a security concern.
+      - path: _test\.go
+        linters: [gosec]
+        text: "(G104|G301|G302|G306):"

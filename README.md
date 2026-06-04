@@ -25,11 +25,28 @@ devlog keeps a structured daily journal as plain markdown files you can always o
 
 ## Installation
 
+**Homebrew (macOS/Linux):**
+
+```bash
+brew tap kacheo/devlog
+brew install devlog
+```
+
+**One-liner (macOS/Linux):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kacheo/devlog/main/scripts/install.sh | bash
+```
+
+**Go:**
+
 ```bash
 go install github.com/kacheo/devlog@latest
 ```
 
-The binary lands in `~/go/bin`. Make sure that's on your `$PATH`. Prebuilt binaries for macOS and Linux are on the [releases page](https://github.com/kacheo/devlog/releases).
+The binary lands in `~/go/bin`. Make sure that's on your `$PATH`.
+
+Prebuilt binaries and checksums for macOS (arm64/amd64) and Linux (amd64) are on the [releases page](https://github.com/kacheo/devlog/releases).
 
 ---
 
