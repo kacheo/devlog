@@ -54,6 +54,22 @@ func ShowTerminal(entry *store.DayEntry, blockers []store.Item, actionItems []st
 	}
 }
 
+// ItemsTerminal writes a human-readable list of items to w.
+// Each line shows the short ID, text, and (for resolved items) the resolution date.
+func ItemsTerminal(items []store.Item, w io.Writer) {
+	if len(items) == 0 {
+		fmt.Fprintln(w, "(none)")
+		return
+	}
+	for _, it := range items {
+		line := fmt.Sprintf("  [%s] %s", store.ShortID(it.ID), it.Text)
+		if it.Resolved && it.ResolvedAt != nil {
+			line += "  (resolved " + it.ResolvedAt.Format("2006-01-02") + ")"
+		}
+		fmt.Fprintln(w, line)
+	}
+}
+
 func formatDeps(deps []string) string {
 	shorts := make([]string, len(deps))
 	for i, d := range deps {

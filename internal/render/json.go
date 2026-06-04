@@ -75,6 +75,43 @@ func toDayJSON(e *store.DayEntry, blockers []store.Item, actionItems []store.Ite
 	}
 }
 
+// itemsEntryJSON is the JSON shape for a single item in the items command output.
+type itemsEntryJSON struct {
+	ID           string  `json:"id"`
+	ShortID      string  `json:"short_id"`
+	Type         string  `json:"type"`
+	Text         string  `json:"text"`
+	Resolved     bool    `json:"resolved"`
+	ResolvedAt   *string `json:"resolved_at,omitempty"` // RFC3339, omitted when nil
+	Dependencies []string `json:"dependencies"`
+}
+
+// ItemsJSON serializes a slice of items for the items command (--json output).
+func ItemsJSON(items []store.Item) ([]byte, error) {
+	out := make([]itemsEntryJSON, len(items))
+	for i, it := range items {
+		deps := it.Dependencies
+		if deps == nil {
+			deps = []string{}
+		}
+		var resolvedAt *string
+		if it.ResolvedAt != nil {
+			s := it.ResolvedAt.UTC().Format("2006-01-02T15:04:05Z")
+			resolvedAt = &s
+		}
+		out[i] = itemsEntryJSON{
+			ID:           it.ID,
+			ShortID:      store.ShortID(it.ID),
+			Type:         it.Type,
+			Text:         it.Text,
+			Resolved:     it.Resolved,
+			ResolvedAt:   resolvedAt,
+			Dependencies: deps,
+		}
+	}
+	return json.Marshal(out)
+}
+
 func toItemJSONSlice(items []store.Item) []itemJSON {
 	if len(items) == 0 {
 		return []itemJSON{}
