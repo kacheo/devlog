@@ -198,8 +198,8 @@ func installHook(hookPath string) error {
 		newContent = existing + managedContent
 	}
 
-	// Write with executable permission
-	if err := os.WriteFile(hookPath, []byte(newContent), 0755); err != nil {
+	// Write with executable permission (shell scripts require 0755).
+	if err := os.WriteFile(hookPath, []byte(newContent), 0755); err != nil { //nolint:gosec // G306: hook must be executable
 		return fmt.Errorf("writing hook: %w", err)
 	}
 	return nil
