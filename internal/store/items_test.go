@@ -2,6 +2,7 @@ package store
 
 import (
 	"testing"
+	"time"
 )
 
 func TestAddItem_Blocker(t *testing.T) {
@@ -140,6 +141,32 @@ func TestResolveItem(t *testing.T) {
 	}
 }
 
+func TestResolveItem_SetsResolvedAt(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	before := time.Now().Add(-time.Second)
+	item, _ := st.AddItem("blocker", "needs timestamp", []string{})
+	resolved, err := st.ResolveItem(item.ID)
+	if err != nil {
+		t.Fatalf("ResolveItem: %v", err)
+	}
+	after := time.Now().Add(time.Second)
+
+	if resolved.ResolvedAt == nil {
+		t.Fatal("ResolvedAt should be set")
+	}
+	if resolved.ResolvedAt.Before(before) || resolved.ResolvedAt.After(after) {
+		t.Errorf("ResolvedAt %v outside expected window [%v, %v]", resolved.ResolvedAt, before, after)
+	}
+
+	// Verify persisted
+	items, _ := st.LoadAllItems()
+	if items[0].ResolvedAt == nil {
+		t.Error("ResolvedAt should be persisted in items.yaml")
+	}
+}
+
 func TestResolveItem_ByShortID(t *testing.T) {
 	dir := t.TempDir()
 	st, _ := New(dir)
@@ -170,6 +197,37 @@ func TestFilterUnresolved(t *testing.T) {
 	got := FilterUnresolved(items)
 	if len(got) != 1 || got[0].ID != "b" {
 		t.Errorf("FilterUnresolved = %v, want [{b todo false}]", got)
+	}
+}
+
+func TestFilterResolved(t *testing.T) {
+	past := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
+	recent := time.Date(2026, 6, 3, 10, 0, 0, 0, time.UTC)
+
+	items := []Item{
+		{ID: "a", Text: "old resolved", Resolved: true, ResolvedAt: &past},
+		{ID: "b", Text: "recent resolved", Resolved: true, ResolvedAt: &recent},
+		{ID: "c", Text: "unresolved", Resolved: false},
+	}
+
+	// All resolved, no date filter
+	got := FilterResolved(items, time.Time{}, time.Time{})
+	if len(got) != 2 {
+		t.Errorf("FilterResolved (all) = %d items, want 2", len(got))
+	}
+
+	// From filter excludes old entry
+	from := time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)
+	got = FilterResolved(items, from, time.Time{})
+	if len(got) != 1 || got[0].ID != "b" {
+		t.Errorf("FilterResolved (from) = %v, want only b", got)
+	}
+
+	// Until filter excludes recent entry
+	until := time.Date(2026, 6, 2, 0, 0, 0, 0, time.UTC)
+	got = FilterResolved(items, time.Time{}, until)
+	if len(got) != 1 || got[0].ID != "a" {
+		t.Errorf("FilterResolved (until) = %v, want only a", got)
 	}
 }
 
