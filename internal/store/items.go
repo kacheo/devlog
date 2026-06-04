@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Item is a global blocker or action item that persists until resolved.
 type Item struct {
-	ID           string   `yaml:"id"`
-	Type         string   `yaml:"type"`         // "blocker" or "action_item"
-	Text         string   `yaml:"text"`
-	Resolved     bool     `yaml:"resolved"`
-	Dependencies []string `yaml:"dependencies"` // UUIDs of other items
+	ID           string     `yaml:"id"`
+	Type         string     `yaml:"type"`                   // "blocker" or "action_item"
+	Text         string     `yaml:"text"`
+	Resolved     bool       `yaml:"resolved"`
+	ResolvedAt   *time.Time `yaml:"resolved_at,omitempty"`  // set when Resolved becomes true
+	Dependencies []string   `yaml:"dependencies"`           // UUIDs of other items
 }
 
 type itemFile struct {
@@ -96,7 +98,8 @@ func (s *Store) AddItem(itemType, text string, deps []string) (*Item, error) {
 	return added, nil
 }
 
-// ResolveItem marks the item matching id (8-char prefix or full UUID) as resolved.
+// ResolveItem marks the item matching id (8-char prefix or full UUID) as resolved,
+// recording the resolution timestamp.
 func (s *Store) ResolveItem(id string) (*Item, error) {
 	var resolved *Item
 	err := s.modifyItems(func(f *itemFile) error {
@@ -110,7 +113,9 @@ func (s *Store) ResolveItem(id string) (*Item, error) {
 		case 0:
 			return fmt.Errorf("no item found matching id %q", id)
 		case 1:
+			now := time.Now()
 			matches[0].Resolved = true
+			matches[0].ResolvedAt = &now
 			resolved = matches[0]
 			return nil
 		default:
@@ -250,6 +255,25 @@ func FilterUnresolved(items []Item) []Item {
 		if !it.Resolved {
 			out = append(out, it)
 		}
+	}
+	return out
+}
+
+// FilterResolved returns only items where Resolved is true, optionally bounded by
+// from/until applied to ResolvedAt. Zero-value from/until means unbounded.
+func FilterResolved(items []Item, from, until time.Time) []Item {
+	out := make([]Item, 0, len(items))
+	for _, it := range items {
+		if !it.Resolved {
+			continue
+		}
+		if !from.IsZero() && it.ResolvedAt != nil && it.ResolvedAt.Before(from) {
+			continue
+		}
+		if !until.IsZero() && it.ResolvedAt != nil && it.ResolvedAt.After(until) {
+			continue
+		}
+		out = append(out, it)
 	}
 	return out
 }

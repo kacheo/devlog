@@ -10,6 +10,7 @@ Available Commands:
   edit        Open a day file in $EDITOR
   help        Help about any command
   init        First-time setup: create config and optionally install git hooks
+  items       List blockers and action items
   resolve     Mark a blocker or action item as resolved
   rm          Remove a bullet from a section by its 1-based index
   search      Full-text search across all journal entries

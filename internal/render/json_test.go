@@ -125,3 +125,60 @@ func TestShowJSON_EmptyItemsSlices(t *testing.T) {
 		t.Errorf("action_items = %v, want []", ai)
 	}
 }
+
+func TestItemsJSON_Unresolved(t *testing.T) {
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "blocker", Text: "waiting on infra", Resolved: false, Dependencies: []string{}},
+	}
+	b, err := ItemsJSON(items)
+	if err != nil {
+		t.Fatalf("ItemsJSON: %v", err)
+	}
+	var out []map[string]interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if len(out) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(out))
+	}
+	if out[0]["short_id"] != "deadbeef" {
+		t.Errorf("short_id = %v, want deadbeef", out[0]["short_id"])
+	}
+	if out[0]["type"] != "blocker" {
+		t.Errorf("type = %v, want blocker", out[0]["type"])
+	}
+	if _, ok := out[0]["resolved_at"]; ok {
+		t.Error("resolved_at should be omitted for unresolved items")
+	}
+}
+
+func TestItemsJSON_Resolved(t *testing.T) {
+	ts := time.Date(2026, 6, 3, 14, 22, 0, 0, time.UTC)
+	items := []store.Item{
+		{ID: "aabbccdd-0000-4000-8000-112233445566", Type: "action_item", Text: "write docs", Resolved: true, ResolvedAt: &ts, Dependencies: []string{}},
+	}
+	b, err := ItemsJSON(items)
+	if err != nil {
+		t.Fatalf("ItemsJSON: %v", err)
+	}
+	var out []map[string]interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if out[0]["resolved"] != true {
+		t.Errorf("resolved = %v, want true", out[0]["resolved"])
+	}
+	if out[0]["resolved_at"] != "2026-06-03T14:22:00Z" {
+		t.Errorf("resolved_at = %v, want 2026-06-03T14:22:00Z", out[0]["resolved_at"])
+	}
+}
+
+func TestItemsJSON_Empty(t *testing.T) {
+	b, err := ItemsJSON([]store.Item{})
+	if err != nil {
+		t.Fatalf("ItemsJSON: %v", err)
+	}
+	if string(b) != "[]" {
+		t.Errorf("expected [], got %s", b)
+	}
+}

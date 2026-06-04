@@ -114,3 +114,42 @@ func TestShowTerminal_ItemsShowDeps(t *testing.T) {
 		t.Errorf("expected dep short ID in output:\n%s", out)
 	}
 }
+
+func TestItemsTerminal_Unresolved(t *testing.T) {
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "blocker", Text: "waiting on infra", Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "[deadbeef]") {
+		t.Errorf("expected short ID in output: %q", out)
+	}
+	if !strings.Contains(out, "waiting on infra") {
+		t.Errorf("expected item text in output: %q", out)
+	}
+	if strings.Contains(out, "resolved") {
+		t.Errorf("unresolved item should not show 'resolved': %q", out)
+	}
+}
+
+func TestItemsTerminal_Resolved(t *testing.T) {
+	ts := time.Date(2026, 6, 3, 14, 0, 0, 0, time.UTC)
+	items := []store.Item{
+		{ID: "aabbccdd-0000-4000-8000-112233445566", Type: "action_item", Text: "write docs", Resolved: true, ResolvedAt: &ts, Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "resolved 2026-06-03") {
+		t.Errorf("expected resolved date in output: %q", out)
+	}
+}
+
+func TestItemsTerminal_Empty(t *testing.T) {
+	var buf bytes.Buffer
+	ItemsTerminal([]store.Item{}, &buf)
+	if !strings.Contains(buf.String(), "(none)") {
+		t.Errorf("expected (none) for empty list: %q", buf.String())
+	}
+}

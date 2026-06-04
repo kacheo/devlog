@@ -14,6 +14,8 @@ This guide covers the full command set, advanced filtering, workspace management
 - [AI Agent Integration](#ai-agent-integration)
 - [Troubleshooting](#troubleshooting)
 
+**Commands:** `init` · `add` · `edit` · `show` · `sync` · `search` · `rm` · `update` · `resolve` · `items` · `workspace`
+
 
 ---
 
@@ -247,6 +249,78 @@ devlog update --id 1 "Shipped rate limiter — also fixed edge case with empty t
 # Replace the 2nd action item
 devlog update --id 2 "Write integration tests (done)" --section action_items
 ```
+
+---
+
+### `resolve`
+
+Mark a blocker or action item as resolved.
+
+```
+devlog resolve <id>
+```
+
+`<id>` is the full UUID or 8-character prefix shown by `devlog add` or `devlog items`.
+Resolving records the exact time of resolution so you can query what was done and when.
+
+```bash
+# Add a blocker (prints: added blocker: a1b2c3d4)
+devlog add "Waiting on staging DB" --section blockers
+
+# Resolve it when it's unblocked
+devlog resolve a1b2c3d4
+
+# See the resolved item with its timestamp
+devlog items --resolved
+```
+
+---
+
+### `items`
+
+List blockers and action items.
+
+```
+devlog items [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| *(none)* | Show only open (unresolved) items |
+| `--resolved` | Show only resolved items |
+| `--all` | Show both resolved and unresolved |
+| `--type <name>` | Filter by type: `blockers` or `action_items` |
+| `--from <date>` | For resolved items: only those resolved on or after this date |
+| `--until <date>` | For resolved items: only those resolved on or before this date |
+| `--json` | Emit structured JSON |
+
+```bash
+devlog items                              # open items
+devlog items --resolved                   # what got resolved
+devlog items --resolved --from yesterday  # resolved since yesterday
+devlog items --resolved --from 2026-06-01 --until 2026-06-07
+devlog items --all                        # everything (open + resolved)
+devlog items --all --type blockers        # every blocker ever
+devlog items --json                       # machine-readable output
+```
+
+`items --json` returns an array:
+
+```json
+[
+  {
+    "id": "a1b2c3d4-e5f6-4789-b012-c3d4e5f67890",
+    "short_id": "a1b2c3d4",
+    "type": "blocker",
+    "text": "Waiting on staging DB",
+    "resolved": true,
+    "resolved_at": "2026-06-03T14:22:00Z",
+    "dependencies": []
+  }
+]
+```
+
+`resolved_at` is omitted for unresolved items.
 
 ---
 
