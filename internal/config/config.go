@@ -112,7 +112,7 @@ func (c *Config) ResolvedEditor() string {
 // Write serializes the config to TOML at path, creating parent directories as needed.
 // Uses atomic write (write to temp file, then rename) to avoid partial writes.
 func (c *Config) Write(path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
 	tmp := path + ".tmp"
