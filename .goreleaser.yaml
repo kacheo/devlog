@@ -40,6 +40,7 @@ brews:
     repository:
       owner: kacheo
       name: homebrew-devlog
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     install: |
       bin.install "devlog"
     test: |

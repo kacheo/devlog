@@ -9,18 +9,9 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ## [Unreleased]
 
-### Added
-- `scripts/install.sh` — curl-downloadable install script with checksum verification
-- Homebrew formula via goreleaser `brews:` block
-- `SECURITY.md` — token handling guidance and vulnerability reporting
-- `CONTRIBUTING.md` — development setup, commit conventions, and release process
-- `CHANGELOG.md` — this file
-- macOS runner added to CI matrix
-- Dependabot for Go modules and GitHub Actions
-
 ---
 
-## [0.1.0] — unreleased
+## [0.1.0] — 2026-06-04
 
 ### Added
 - `devlog show --from DATE [--until DATE]` — date-range view replacing the removed standup command
@@ -28,7 +19,13 @@ Versioning: [Semantic Versioning](https://semver.org/)
 - `devlog rm SECTION INDEX` — remove a section bullet by 1-based index
 - `devlog update SECTION INDEX "text"` — replace a section bullet by 1-based index
 - `devlog workspace add/list/exclude` — manage workspace directories for auto-discovery
+- `scripts/install.sh` — curl-downloadable install script with checksum verification
+- Homebrew formula via goreleaser `brews:` block
+- `SECURITY.md` — token handling guidance and vulnerability reporting
+- `CONTRIBUTING.md` — development setup, commit conventions, and release process
 - CI coverage enforcement at 70% threshold
+- macOS runner added to CI matrix
+- Dependabot for Go modules and GitHub Actions
 - `sync.Mutex` in Store to serialize same-process goroutines
 - `post-commit` hook idempotent managed-block install/update
 - GitHub PR import via `gh` CLI (preferred) or REST API with token
