@@ -76,11 +76,11 @@ func (s *Store) withLock(path string, fn func() error) error {
 
 // saveRaw atomically writes content to path. Assumes the caller holds the lock.
 func (s *Store) saveRaw(path string, content []byte) error {
-	if err := os.MkdirAll(s.dir, 0755); err != nil {
+	if err := os.MkdirAll(s.dir, 0750); err != nil {
 		return fmt.Errorf("creating journal directory: %w", err)
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, content, 0644); err != nil {
+	if err := os.WriteFile(tmp, content, 0600); err != nil {
 		return fmt.Errorf("writing temp file: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
