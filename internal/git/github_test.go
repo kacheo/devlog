@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/kacheo/devlog/internal/store"
 )
 
 func TestParseGHPROutput(t *testing.T) {
@@ -154,7 +152,7 @@ func TestFetchPRs_NoGHNoToken(t *testing.T) {
 		// FetchPRs is designed to return nil, nil when nothing is available.
 		// If gh is available and fails, it falls through to the token check (empty) and returns nil.
 		// An error here means gh is available and returned a non-nil error that wasn't suppressed — unexpected.
-		t.Logf("FetchPRs returned error (gh may be available and errored): %v", err)
+		t.Errorf("FetchPRs(no token, fake repo) returned unexpected error: %v", err)
 	}
 	_ = prs
 }
@@ -315,5 +313,3 @@ func TestFetchPRs_WithToken(t *testing.T) {
 	_ = prs
 }
 
-// Compile-time check that store.PR is the right type.
-var _ []store.PR
