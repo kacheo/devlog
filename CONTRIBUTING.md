@@ -5,7 +5,7 @@ Thank you for your interest in contributing to devlog.
 ## Development Setup
 
 **Prerequisites:**
-- Go 1.22+ (`go version`)
+- Go 1.26+ (`go version`)
 - [golangci-lint](https://golangci-lint.run/usage/install/) v2.x (`golangci-lint --version`)
 - Optional: [gh CLI](https://cli.github.com/) for PR integration testing
 

@@ -53,9 +53,9 @@ curl -fsSL "$CHECKSUM_URL" -o "${TMP}/checksums.txt"
 # Verify checksum
 cd "$TMP"
 if command -v sha256sum >/dev/null 2>&1; then
-  grep "$ARCHIVE" checksums.txt | sha256sum --check --status
+  grep -F "$ARCHIVE" checksums.txt | sha256sum --check --status
 elif command -v shasum >/dev/null 2>&1; then
-  grep "$ARCHIVE" checksums.txt | shasum -a 256 --check --status
+  grep -F "$ARCHIVE" checksums.txt | shasum -a 256 --check --status
 else
   echo "Warning: no sha256sum or shasum found — skipping checksum verification." >&2
 fi
