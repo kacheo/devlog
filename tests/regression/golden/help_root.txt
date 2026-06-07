@@ -16,6 +16,7 @@ Available Commands:
   search      Full-text search across all journal entries
   show        Print journal entries
   sync        Import today's commits and PRs from configured repos
+  tags        Manage journal tags
   update      Replace a bullet in a section by its 1-based index
   workspace   Manage workspace directories for auto-tracking
 
