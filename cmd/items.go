@@ -15,6 +15,7 @@ import (
 var (
 	itemsResolved bool
 	itemsAll      bool
+	itemsOverdue  bool
 	itemsType     string
 	itemsFrom     string
 	itemsUntil    string
@@ -35,6 +36,7 @@ Examples:
   devlog items --resolved                   # resolved items
   devlog items --resolved --from yesterday  # resolved since yesterday
   devlog items --all --type blockers        # every blocker ever
+  devlog items --overdue                    # action items past their due date
   devlog items --json                       # machine-readable`,
 	Args: cobra.NoArgs,
 	RunE: runItems,
@@ -43,6 +45,7 @@ Examples:
 func init() {
 	itemsCmd.Flags().BoolVar(&itemsResolved, "resolved", false, "show only resolved items")
 	itemsCmd.Flags().BoolVar(&itemsAll, "all", false, "show both resolved and unresolved items")
+	itemsCmd.Flags().BoolVar(&itemsOverdue, "overdue", false, "show only overdue action items (past due date)")
 	itemsCmd.Flags().StringVar(&itemsType, "type", "", "filter by type: blockers or action_items")
 	itemsCmd.Flags().StringVar(&itemsFrom, "from", "", "show resolved items resolved on or after this date (YYYY-MM-DD)")
 	itemsCmd.Flags().StringVar(&itemsUntil, "until", "", "show resolved items resolved on or before this date (YYYY-MM-DD)")
@@ -52,6 +55,9 @@ func init() {
 func runItems(cmd *cobra.Command, _ []string) error {
 	if itemsResolved && itemsAll {
 		return fmt.Errorf("--resolved and --all are mutually exclusive")
+	}
+	if itemsOverdue && (itemsResolved || itemsAll) {
+		return fmt.Errorf("--overdue is mutually exclusive with --resolved and --all")
 	}
 
 	// Validate --type
@@ -108,6 +114,8 @@ func runItems(cmd *cobra.Command, _ []string) error {
 		items = append(unresolved, resolved...)
 	case itemsResolved:
 		items = store.FilterResolved(all, from, until)
+	case itemsOverdue:
+		items = store.FilterOverdue(all)
 	default:
 		items = store.FilterUnresolved(all)
 	}
@@ -151,6 +159,8 @@ func itemsLabel() string {
 		parts = append(parts, "All items")
 	case itemsResolved:
 		parts = append(parts, "Resolved items")
+	case itemsOverdue:
+		parts = append(parts, "Overdue items")
 	default:
 		parts = append(parts, "Open items")
 	}

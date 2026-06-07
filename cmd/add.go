@@ -15,6 +15,8 @@ var (
 	addSection string
 	addTags    []string
 	addDeps    []string
+	addDue     string
+	addETA     string
 )
 
 var addCmd = &cobra.Command{
@@ -28,6 +30,8 @@ func init() {
 	addCmd.Flags().StringVar(&addSection, "section", "", "section to append to (default: notes)")
 	addCmd.Flags().StringArrayVar(&addTags, "tag", nil, "add a tag to today's frontmatter (repeatable)")
 	addCmd.Flags().StringArrayVar(&addDeps, "dep", nil, "dependency UUID (8-char prefix or full; repeatable)")
+	addCmd.Flags().StringVar(&addDue, "due", "", "due date for action_item (YYYY-MM-DD)")
+	addCmd.Flags().StringVar(&addETA, "eta", "", "estimated resolution date for blocker (YYYY-MM-DD)")
 	rootCmd.AddCommand(addCmd)
 }
 
@@ -61,7 +65,24 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Route global sections (blockers, action_items) to the items store
 	if store.IsGlobalSection(targetSection) {
 		itemType, _ := store.NormalizeItemType(targetSection)
-		item, err := st.AddItem(itemType, text, addDeps)
+
+		var opts store.ItemOptions
+		if addDue != "" {
+			d, err := parseDateFlag(addDue)
+			if err != nil {
+				return fmt.Errorf("--due: %w", err)
+			}
+			opts.Due = &d
+		}
+		if addETA != "" {
+			d, err := parseDateFlag(addETA)
+			if err != nil {
+				return fmt.Errorf("--eta: %w", err)
+			}
+			opts.ETA = &d
+		}
+
+		item, err := st.AddItem(itemType, text, addDeps, opts)
 		if err != nil {
 			return err
 		}
@@ -69,9 +90,15 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Deps flag only makes sense for global items
+	// Deps, due, and eta flags only make sense for global items
 	if len(addDeps) > 0 {
 		return fmt.Errorf("--dep is only valid for blockers and action_items sections")
+	}
+	if addDue != "" {
+		return fmt.Errorf("--due is only valid for action_items section")
+	}
+	if addETA != "" {
+		return fmt.Errorf("--eta is only valid for blockers section")
 	}
 
 	// Validate tags before touching any files
@@ -114,4 +141,13 @@ func containsStr(ss []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// parseDateFlag parses a YYYY-MM-DD string into a store.Date.
+func parseDateFlag(s string) (store.Date, error) {
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return store.Date{}, fmt.Errorf("invalid date %q: expected YYYY-MM-DD", s)
+	}
+	return store.DateOf(t), nil
 }
