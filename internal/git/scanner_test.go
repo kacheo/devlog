@@ -81,6 +81,9 @@ func initTempRepo(t *testing.T, email string) string {
 	run("git", "init")
 	run("git", "config", "user.email", email)
 	run("git", "config", "user.name", "Test User")
+	// Disable commit signing for this test repo so environments with mandatory
+	// GPG/SSH signing configuration don't break the commit.
+	run("git", "config", "commit.gpgsign", "false")
 	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("hello"), 0600); err != nil {
 		t.Fatal(err)
 	}
