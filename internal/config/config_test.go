@@ -181,7 +181,7 @@ func TestWrite_AtomicNoPanicOnError(t *testing.T) {
 	// Probe: if the process can write despite the permission (e.g. running as root), skip.
 	probe := filepath.Join(dir, "probe")
 	if f, err := os.Create(probe); err == nil {
-		f.Close()
+		_ = f.Close()
 		os.Remove(probe)
 		t.Skip("process can write to read-only dir (elevated privileges); skipping")
 	}
