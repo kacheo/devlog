@@ -58,6 +58,8 @@ devlog add "Implemented rate limiter middleware"  # log what you're working on
 devlog show today                              # review your day
 devlog show --from yesterday                   # review a date range
 devlog sync                                    # import today's commits and PRs
+devlog tags list                               # see all tags you've used and how often
+devlog tags rename auth oauth                  # rename a tag across every day file
 ```
 
 ---
@@ -72,6 +74,8 @@ devlog sync                                    # import today's commits and PRs
 | `show [today\|yesterday\|YYYY-MM-DD\|week]` | Print entries for a day or the last 7 days |
 | `show --from DATE [--until DATE]` | Print entries for a date range (--until defaults to today) |
 | `sync [--quiet]` | Import today's commits and PRs from configured repos |
+| `tags [list]` | List all tags with per-day usage counts |
+| `tags rename <old> <new>` | Rename a tag across all entries (case-insensitive) |
 
 **Global flags:** `--json` (structured output on `show`, `sync`) · `--date YYYY-MM-DD` (target a specific date on `add`, `edit`, `show`, `sync`)
 
@@ -187,6 +191,7 @@ devlog show today --json          # read today's context before starting work
 devlog add "what was done"        # log completed tasks
 devlog sync --quiet               # import git activity
 devlog show --from yesterday --json  # review recent activity as JSON
+devlog tags list --json           # discover tag usage across the journal
 ```
 
 ---

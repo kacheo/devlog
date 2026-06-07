@@ -132,6 +132,25 @@ func toItemJSONSlice(items []store.Item) []itemJSON {
 	return out
 }
 
+type tagsJSON struct {
+	Version string         `json:"version"`
+	Tags    []tagCountJSON `json:"tags"`
+}
+
+type tagCountJSON struct {
+	Tag   string `json:"tag"`
+	Count int    `json:"count"`
+}
+
+// TagsJSON serializes tag counts for the tags list command (--json output).
+func TagsJSON(tags []store.TagCount) ([]byte, error) {
+	out := make([]tagCountJSON, len(tags))
+	for i, tc := range tags {
+		out[i] = tagCountJSON{Tag: tc.Tag, Count: tc.Count}
+	}
+	return json.Marshal(tagsJSON{Version: "1", Tags: out})
+}
+
 func notNilStrings(s []string) []string {
 	if s == nil {
 		return []string{}

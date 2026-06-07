@@ -100,6 +100,48 @@ func TestAddCmd_UnknownSection_Errors(t *testing.T) {
 	}
 }
 
+func TestAddCmd_RejectsUppercaseTag(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	addSection = ""
+	addTags = nil
+	globalDate = ""
+
+	rootCmd.SetArgs([]string{"add", "--tag", "Auth", "some note"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for uppercase tag, got nil")
+	}
+}
+
+func TestAddCmd_RejectsHyphenatedTag(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	addSection = ""
+	addTags = nil
+	globalDate = ""
+
+	rootCmd.SetArgs([]string{"add", "--tag", "auth-backend", "some note"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for hyphenated tag, got nil")
+	}
+}
+
+func TestAddCmd_RejectsEmptyTag(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	addSection = ""
+	addTags = nil
+	globalDate = ""
+
+	rootCmd.SetArgs([]string{"add", "--tag", "", "some note"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for empty tag, got nil")
+	}
+}
+
 func TestAddCmd_TagFlag(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)

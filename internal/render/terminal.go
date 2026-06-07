@@ -70,6 +70,17 @@ func ItemsTerminal(items []store.Item, w io.Writer) {
 	}
 }
 
+// TagsTerminal writes a two-column tag/count list to w.
+func TagsTerminal(tags []store.TagCount, w io.Writer) {
+	if len(tags) == 0 {
+		fmt.Fprintln(w, "(no tags)")
+		return
+	}
+	for _, tc := range tags {
+		fmt.Fprintf(w, "  %-30s %d\n", tc.Tag, tc.Count)
+	}
+}
+
 func formatDeps(deps []string) string {
 	shorts := make([]string, len(deps))
 	for i, d := range deps {

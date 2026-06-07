@@ -182,3 +182,75 @@ func TestItemsJSON_Empty(t *testing.T) {
 		t.Errorf("expected [], got %s", b)
 	}
 }
+
+func TestTagsJSON_EmptySlice(t *testing.T) {
+	b, err := TagsJSON([]store.TagCount{})
+	if err != nil {
+		t.Fatalf("TagsJSON: %v", err)
+	}
+	var v map[string]interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		t.Fatalf("invalid JSON: %v\nraw: %s", err, b)
+	}
+	if v["version"] != "1" {
+		t.Errorf("version = %v, want '1'", v["version"])
+	}
+	tags, ok := v["tags"].([]interface{})
+	if !ok {
+		t.Fatalf("tags field missing or wrong type: %v", v["tags"])
+	}
+	if len(tags) != 0 {
+		t.Errorf("expected empty tags array, got %v", tags)
+	}
+}
+
+func TestTagsJSON_Schema(t *testing.T) {
+	input := []store.TagCount{
+		{Tag: "auth", Count: 5},
+		{Tag: "backend", Count: 2},
+	}
+	b, err := TagsJSON(input)
+	if err != nil {
+		t.Fatalf("TagsJSON: %v", err)
+	}
+	var v map[string]interface{}
+	if err := json.Unmarshal(b, &v); err != nil {
+		t.Fatalf("invalid JSON: %v\nraw: %s", err, b)
+	}
+	if v["version"] != "1" {
+		t.Errorf("version = %v, want '1'", v["version"])
+	}
+	tags := v["tags"].([]interface{})
+	if len(tags) != 2 {
+		t.Fatalf("len(tags) = %d, want 2", len(tags))
+	}
+	first := tags[0].(map[string]interface{})
+	if first["tag"] != "auth" {
+		t.Errorf("tags[0].tag = %v, want 'auth'", first["tag"])
+	}
+	if first["count"] != float64(5) {
+		t.Errorf("tags[0].count = %v, want 5", first["count"])
+	}
+	second := tags[1].(map[string]interface{})
+	if second["tag"] != "backend" {
+		t.Errorf("tags[1].tag = %v, want 'backend'", second["tag"])
+	}
+}
+
+func TestTagsJSON_PreservesInputOrder(t *testing.T) {
+	// TagsJSON must not reorder; caller is responsible for sorting.
+	input := []store.TagCount{
+		{Tag: "zebra", Count: 10},
+		{Tag: "alpha", Count: 1},
+	}
+	b, err := TagsJSON(input)
+	if err != nil {
+		t.Fatalf("TagsJSON: %v", err)
+	}
+	var v map[string]interface{}
+	_ = json.Unmarshal(b, &v)
+	tags := v["tags"].([]interface{})
+	if tags[0].(map[string]interface{})["tag"] != "zebra" {
+		t.Errorf("expected first tag 'zebra', got %v", tags[0])
+	}
+}
