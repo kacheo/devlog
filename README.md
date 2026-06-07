@@ -2,7 +2,7 @@
 
 **Local-first engineer journal — git commits and PRs auto-imported, date-range views and JSON output built in.**
 
-[![License](https://img.shields.io/github/license/kacheo/devlog)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kacheo/devlog)](https://goreportcard.com/report/github.com/kacheo/devlog)
 [![Release](https://img.shields.io/github/v/release/kacheo/devlog)](https://github.com/kacheo/devlog/releases)
 
