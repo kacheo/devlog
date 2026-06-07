@@ -48,6 +48,9 @@ func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) (*store.D
 				continue
 			}
 
+			if !quiet {
+				fmt.Fprintf(os.Stderr, "scanning commits: %s\n", repo.Name)
+			}
 			commits, err := git.ScanCommits(repo.Path, repo.Name, date)
 			if err != nil {
 				if !quiet {
@@ -62,6 +65,9 @@ func runSyncWithConfig(cfg *config.Config, date time.Time, quiet bool) (*store.D
 				ownerRepo, _ = git.GetOriginSlug(repo.Path)
 			}
 			if ownerRepo != "" {
+				if !quiet {
+					fmt.Fprintf(os.Stderr, "fetching PRs: %s\n", repo.Name)
+				}
 				prs, err := git.FetchPRs(ownerRepo, repo.Name, cfg.GitHub.Token, date)
 				if err != nil {
 					if !quiet {
