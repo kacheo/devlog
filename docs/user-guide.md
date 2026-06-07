@@ -14,7 +14,7 @@ This guide covers the full command set, advanced filtering, workspace management
 - [AI Agent Integration](#ai-agent-integration)
 - [Troubleshooting](#troubleshooting)
 
-**Commands:** `init` · `add` · `edit` · `show` · `sync` · `search` · `rm` · `update` · `resolve` · `items` · `workspace`
+**Commands:** `init` · `add` · `edit` · `show` · `sync` · `search` · `rm` · `update` · `resolve` · `items` · `workspace` · `tags`
 
 
 ---
@@ -342,6 +342,69 @@ See [Workspace Management](#workspace-management) for full details.
 
 ---
 
+### `tags`
+
+List all tags you've used across your journal, or rename a tag across all entries.
+
+```
+devlog tags [list] [--json]
+devlog tags rename <old> <new>
+```
+
+**`tags list`** scans every day file and counts how many days carry each tag. Results are sorted by usage count (descending), then alphabetically. Calling `devlog tags` with no subcommand defaults to `list`.
+
+```bash
+devlog tags                      # same as tags list
+devlog tags list                 # all tags with counts
+devlog tags list --json          # machine-readable
+```
+
+Terminal output (two-column):
+
+```
+auth                           12
+backend                         5
+frontend                        2
+```
+
+`tags list --json` schema:
+
+```json
+{
+  "version": "1",
+  "tags": [
+    { "tag": "auth",     "count": 12 },
+    { "tag": "backend",  "count":  5 },
+    { "tag": "frontend", "count":  2 }
+  ]
+}
+```
+
+**`tags rename`** replaces every occurrence of `<old>` with `<new>` across all day files. Matching is case-insensitive; the new tag name is stored exactly as given. Tag order within each entry is preserved. Files that don't contain the tag are not written.
+
+```bash
+devlog tags rename auth oauth            # rename across all entries
+devlog tags rename "old tag" "new tag"   # names with spaces (quote in shell)
+```
+
+Output confirms the number of files changed:
+
+```
+Renamed tag "auth" → "oauth" in 12 file(s).
+```
+
+If no entries use the tag, you'll see:
+
+```
+No entries use tag "auth".
+```
+
+**Notes:**
+- Renaming a tag to itself (case-insensitively) is an error.
+- Use `devlog tags list` to discover available tags before filtering with `devlog show --tag`.
+
+---
+
 ## Daily File Format
 
 Each day is stored as `~/devlog/YYYY-MM-DD.md`. The full schema including all sections:
@@ -428,6 +491,15 @@ Both can coexist in `config.toml`. Explicit `[[repos]]` entries always sync. Wor
 ---
 
 ## Filtering and Searching
+
+### Discover available tags
+
+Use `devlog tags list` to see every tag you've used and how often, before filtering with `--tag`:
+
+```bash
+devlog tags list                 # see what tags exist
+devlog show week --tag backend   # then filter
+```
 
 ### Filter `show` output
 
@@ -539,6 +611,26 @@ Returns a JSON array — one element per matching day, each with the same shape 
 ```
 
 > Check `version` before parsing. Additive fields keep version `"1"`, breaking changes increment it.
+
+### `tags list --json` schema
+
+```json
+{
+  "version": "1",
+  "tags": [
+    { "tag": "auth",     "count": 12 },
+    { "tag": "backend",  "count":  5 }
+  ]
+}
+```
+
+```bash
+# List tags with count > 3
+devlog tags list --json | jq '[.tags[] | select(.count > 3)]'
+
+# Extract just tag names sorted by count
+devlog tags list --json | jq '[.tags[].tag]'
+```
 
 ### jq patterns
 

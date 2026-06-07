@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ## [Unreleased]
 
+### Added
+- `devlog tags [list]` — list all tags across all day files with usage counts, sorted by frequency then alphabetically; `--json` supported
+- `devlog tags rename <old> <new>` — rename a tag (case-insensitive match) across all day files; preserves tag order, leaves unaffected files untouched
+
 ---
 
 ## [0.1.0] — 2026-06-04

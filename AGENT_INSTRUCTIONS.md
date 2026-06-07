@@ -75,6 +75,24 @@ devlog show --from yesterday --json
 devlog sync --quiet && devlog show --from yesterday --json
 ```
 
+### Discover and filter by tag
+
+```bash
+# List all tags and their usage counts
+devlog tags list --json
+# Returns:
+# {
+#   "version": "1",
+#   "tags": [
+#     { "tag": "auth",    "count": 5 },
+#     { "tag": "backend", "count": 3 }
+#   ]
+# }
+
+# Then filter show output to a specific tag
+devlog show --from 2026-05-01 --tag auth --json
+```
+
 ### Target a specific date
 
 ```bash
@@ -117,6 +135,21 @@ Returns a JSON array where each element has the same shape as the single-day sch
 ]
 ```
 
+### `devlog tags list --json`
+
+```json
+{
+  "version": "1",
+  "tags": [
+    { "tag": "auth",     "count": 12 },
+    { "tag": "backend",  "count":  5 },
+    { "tag": "frontend", "count":  2 }
+  ]
+}
+```
+
+`count` is the number of day files containing the tag (not the number of bullets). Tags are sorted by count descending, then alphabetically. Use this to discover available tags before calling `devlog show --tag <tag>` to filter entries.
+
 ### Version field semantics
 
 - All `--json` output includes `"version": "1"`.
@@ -157,15 +190,15 @@ devlog/
 │   ├── edit.go                  # Open day file in $EDITOR
 │   ├── show.go                  # Read and render day files
 │   ├── sync.go                  # Import commits and PRs from git/GitHub
-│   └── standup.go               # Compile and render standup view
+│   └── tags.go                  # List and rename tags across all day files
 └── internal/
     ├── config/config.go         # Load/write config.toml; env var overrides
-    ├── store/store.go           # Open/create day files; path resolution; date parsing
+    ├── store/store.go           # Open/create day files; path resolution; date parsing; AllDates()
     ├── store/entry.go           # DayEntry struct (frontmatter + sections)
+    ├── store/tags.go            # ListTags(), RenameTag() — tag aggregation and rewrite
     ├── git/scanner.go           # exec git log, parse commits
     ├── git/github.go            # gh CLI wrapper + GitHub REST client
     └── render/
-        ├── markdown.go          # Serialize DayEntry to .md
         ├── terminal.go          # Human-readable colored output
         └── json.go              # --json output structs
 ```
@@ -236,4 +269,6 @@ GOOS=linux GOARCH=amd64 go build -o devlog-linux-amd64 .
 - **Write safety:** `devlog add` and `devlog sync` take per-file advisory locks and write atomically.
 - **Idempotent sync:** Running `devlog sync` multiple times deduplicates by commit SHA and PR number.
 - **Graceful degradation:** Missing `gh` CLI, no GitHub token, or repo without a GitHub remote is not an error — that source is skipped silently.
+- **Tag rename is case-insensitive and atomic:** `devlog tags rename` matches the old tag case-insensitively, writes the new name exactly as given, and rewrites each affected file atomically under an advisory lock. Files without the tag are not touched.
+- **Tag counts are per-day:** `devlog tags list` counts the number of day files containing each tag, not the number of occurrences within a file.
 - **Version:** `devlog --version` prints the build version (e.g. `v0.1.0`; `dev` when built from source).
