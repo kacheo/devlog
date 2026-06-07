@@ -269,6 +269,7 @@ GOOS=linux GOARCH=amd64 go build -o devlog-linux-amd64 .
 - **Write safety:** `devlog add` and `devlog sync` take per-file advisory locks and write atomically.
 - **Idempotent sync:** Running `devlog sync` multiple times deduplicates by commit SHA and PR number.
 - **Graceful degradation:** Missing `gh` CLI, no GitHub token, or repo without a GitHub remote is not an error — that source is skipped silently.
+- **Tags are validated on write:** Tags must match `[a-z0-9_]+` — lowercase letters, digits, and underscores. `devlog add --tag Auth` or `--tag api-v2` will return an error. The new tag in `devlog tags rename` is also validated; the old tag is matched case-insensitively (to handle pre-validation legacy tags).
 - **Tag rename is case-insensitive and atomic:** `devlog tags rename` matches the old tag case-insensitively, writes the new name exactly as given, and rewrites each affected file atomically under an advisory lock. Files without the tag are not touched.
 - **Tag counts are per-day:** `devlog tags list` counts the number of day files containing each tag, not the number of occurrences within a file.
 - **Version:** `devlog --version` prints the build version (e.g. `v0.1.0`; `dev` when built from source).

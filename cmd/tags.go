@@ -87,6 +87,10 @@ func runTagsList(cmd *cobra.Command, _ []string) error {
 func runTagsRename(cmd *cobra.Command, args []string) error {
 	oldTag, newTag := args[0], args[1]
 
+	if err := store.ValidateTag(newTag); err != nil {
+		return err
+	}
+
 	st, err := openStore()
 	if err != nil {
 		return err

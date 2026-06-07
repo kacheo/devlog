@@ -2,9 +2,24 @@ package store
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 )
+
+var validTagRe = regexp.MustCompile(`^[a-z0-9_]+$`)
+
+// ValidateTag returns an error if tag does not conform to the allowed format:
+// one or more lowercase letters, digits, or underscores.
+func ValidateTag(tag string) error {
+	if tag == "" {
+		return fmt.Errorf("tag must not be empty")
+	}
+	if !validTagRe.MatchString(tag) {
+		return fmt.Errorf("invalid tag %q: tags must contain only lowercase letters, digits, and underscores (e.g. auth, api_v2)", tag)
+	}
+	return nil
+}
 
 // TagCount holds a tag name and the number of day files that contain it.
 type TagCount struct {

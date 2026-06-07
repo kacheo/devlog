@@ -70,13 +70,17 @@ devlog add "text" [flags]
 | Flag | Description |
 |------|-------------|
 | `--section <name>` | Section to append to: `notes` (default), `blockers`, `action_items` |
-| `--tag <tag>` | Add a tag to today's frontmatter (repeatable) |
+| `--tag <tag>` | Add a tag to today's frontmatter (repeatable); must be lowercase letters, digits, and underscores only |
+
+Tags must match the pattern `[a-z0-9_]+` — lowercase letters, digits, and underscores. Examples: `auth`, `api_v2`, `oauth2`.
 
 ```bash
 devlog add "Shipped the rate limiter PR"
 devlog add "Blocked on staging DB provisioning" --section blockers
 devlog add "Write integration tests for /v2/users" --section action_items
 devlog add "Deployed new auth flow" --tag backend --tag auth
+devlog add "API work" --tag api_v2          # underscores ok
+devlog add "API work" --tag "Auth"          # error: uppercase not allowed
 ```
 
 ---
@@ -380,11 +384,11 @@ frontend                        2
 }
 ```
 
-**`tags rename`** replaces every occurrence of `<old>` with `<new>` across all day files. Matching is case-insensitive; the new tag name is stored exactly as given. Tag order within each entry is preserved. Files that don't contain the tag are not written.
+**`tags rename`** replaces every occurrence of `<old>` with `<new>` across all day files. Matching on `<old>` is case-insensitive; `<new>` must conform to the tag format. Tag order within each entry is preserved. Files that don't contain the tag are not written.
 
 ```bash
 devlog tags rename auth oauth            # rename across all entries
-devlog tags rename "old tag" "new tag"   # names with spaces (quote in shell)
+devlog tags rename old_name new_name     # underscores allowed
 ```
 
 Output confirms the number of files changed:

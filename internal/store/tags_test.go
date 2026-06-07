@@ -292,6 +292,43 @@ func TestRenameTag_EmptyNewTag(t *testing.T) {
 	}
 }
 
+func TestValidateTag_Valid(t *testing.T) {
+	valid := []string{
+		"auth",
+		"backend",
+		"api_server",
+		"oauth2",
+		"v2",
+		"my_tag_123",
+		"a",
+		"z",
+		"0",
+	}
+	for _, tag := range valid {
+		if err := ValidateTag(tag); err != nil {
+			t.Errorf("ValidateTag(%q) = %v, want nil", tag, err)
+		}
+	}
+}
+
+func TestValidateTag_Invalid(t *testing.T) {
+	invalid := []string{
+		"Auth",          // uppercase
+		"BACKEND",       // uppercase
+		"auth-backend",  // hyphen
+		"auth backend",  // space
+		"auth.backend",  // dot
+		"",              // empty
+		"CamelCase",     // mixed case
+		"snake_Case",    // mixed case
+	}
+	for _, tag := range invalid {
+		if err := ValidateTag(tag); err == nil {
+			t.Errorf("ValidateTag(%q) = nil, want error", tag)
+		}
+	}
+}
+
 func TestAllDates_NonExistentDir(t *testing.T) {
 	// A store pointing at a dir that doesn't exist yet should return empty, not error.
 	st, _ := New(t.TempDir() + "/does-not-exist")

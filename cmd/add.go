@@ -74,6 +74,13 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--dep is only valid for blockers and action_items sections")
 	}
 
+	// Validate tags before touching any files
+	for _, tag := range addTags {
+		if err := store.ValidateTag(tag); err != nil {
+			return err
+		}
+	}
+
 	// Determine target date for day-file sections
 	date, err := resolveDate(globalDate)
 	if err != nil {

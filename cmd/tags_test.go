@@ -236,6 +236,23 @@ func TestTagsRenameCmd_DeduplicatesWhenNewTagAlreadyPresent(t *testing.T) {
 	}
 }
 
+func TestTagsRenameCmd_RejectsInvalidNewTag(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetTagsFlags()
+
+	st, _ := store.New(dir)
+	makeTagEntry(t, st, time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local), []string{"auth"})
+
+	for _, badTag := range []string{"Auth", "new-tag", "New Tag", ""} {
+		rootCmd.SetArgs([]string{"tags", "rename", "auth", badTag})
+		err := rootCmd.Execute()
+		if err == nil {
+			t.Errorf("expected error for invalid new tag %q, got nil", badTag)
+		}
+	}
+}
+
 func TestTagsRenameCmd_CaseInsensitive(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
