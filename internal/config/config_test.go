@@ -172,16 +172,21 @@ func TestWrite_CreatesParentDirs(t *testing.T) {
 func TestWrite_AtomicNoPanicOnError(t *testing.T) {
 	// Writing to a path whose parent doesn't exist should still error cleanly
 	cfg := &Config{Journal: JournalConfig{Dir: "/tmp"}}
-	// Write creates parent dirs, so use a read-only parent to force failure
-	// (Skip on systems where root can always write)
+	// Write creates parent dirs, so use a read-only parent to force failure.
 	dir := t.TempDir()
 	if err := os.Chmod(dir, 0500); err != nil {
 		t.Skip("cannot set dir read-only")
 	}
 	t.Cleanup(func() { _ = os.Chmod(dir, 0700) })
+	// Probe: if the process can write despite the permission (e.g. running as root), skip.
+	probe := filepath.Join(dir, "probe")
+	if f, err := os.Create(probe); err == nil {
+		_ = f.Close()
+		os.Remove(probe)
+		t.Skip("process can write to read-only dir (elevated privileges); skipping")
+	}
 	path := filepath.Join(dir, "sub", "config.toml")
-	err := cfg.Write(path)
-	if err == nil {
+	if err := cfg.Write(path); err == nil {
 		t.Error("Write() to unwritable dir should error")
 	}
 }
