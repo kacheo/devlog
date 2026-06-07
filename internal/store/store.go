@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -150,6 +151,26 @@ func ParseDate(s string) (time.Time, error) {
 		}
 		return t, nil
 	}
+}
+
+// AllDates returns dates for every YYYY-MM-DD.md file in the journal dir, sorted oldest-first.
+// Returns an empty slice (not an error) if the directory does not exist.
+func (s *Store) AllDates() ([]time.Time, error) {
+	matches, err := filepath.Glob(filepath.Join(s.dir, "????-??-??.md"))
+	if err != nil {
+		return nil, fmt.Errorf("scanning journal dir: %w", err)
+	}
+	dates := make([]time.Time, 0, len(matches))
+	for _, m := range matches {
+		base := filepath.Base(m)
+		t, err := time.ParseInLocation("2006-01-02.md", base, time.Local)
+		if err != nil {
+			continue // skip non-date files
+		}
+		dates = append(dates, t)
+	}
+	sort.Slice(dates, func(i, j int) bool { return dates[i].Before(dates[j]) })
+	return dates, nil
 }
 
 // truncateToDay returns midnight of t in local zone.
