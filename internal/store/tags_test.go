@@ -236,6 +236,74 @@ func TestRenameTag_PreservesOrder(t *testing.T) {
 	}
 }
 
+func TestRenameTag_NewTagAlreadyPresent(t *testing.T) {
+	// Renaming auth→oauth when entry already has [auth, oauth] should yield [oauth], not [oauth, oauth].
+	st, _ := New(t.TempDir())
+	d1 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local)
+	makeEntry(t, st, d1, []string{"auth", "oauth"})
+
+	n, err := st.RenameTag("auth", "oauth")
+	if err != nil {
+		t.Fatalf("RenameTag: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("modified %d files, want 1", n)
+	}
+
+	e, _ := st.Load(d1)
+	if len(e.Tags) != 1 {
+		t.Errorf("tags after rename = %v, want [oauth] (no duplicate)", e.Tags)
+	}
+	if e.Tags[0] != "oauth" {
+		t.Errorf("tag = %q, want 'oauth'", e.Tags[0])
+	}
+}
+
+func TestRenameTag_NewTagAlreadyPresent_PreservesFirst(t *testing.T) {
+	// When [oauth, auth] is renamed auth→oauth, the first oauth (position 0) survives.
+	st, _ := New(t.TempDir())
+	d1 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local)
+	makeEntry(t, st, d1, []string{"oauth", "auth"})
+
+	_, err := st.RenameTag("auth", "oauth")
+	if err != nil {
+		t.Fatalf("RenameTag: %v", err)
+	}
+
+	e, _ := st.Load(d1)
+	if len(e.Tags) != 1 || e.Tags[0] != "oauth" {
+		t.Errorf("tags = %v, want [oauth]", e.Tags)
+	}
+}
+
+func TestRenameTag_EmptyOldTag(t *testing.T) {
+	st, _ := New(t.TempDir())
+	_, err := st.RenameTag("", "new")
+	if err == nil {
+		t.Error("expected error for empty old tag")
+	}
+}
+
+func TestRenameTag_EmptyNewTag(t *testing.T) {
+	st, _ := New(t.TempDir())
+	_, err := st.RenameTag("auth", "")
+	if err == nil {
+		t.Error("expected error for empty new tag")
+	}
+}
+
+func TestAllDates_NonExistentDir(t *testing.T) {
+	// A store pointing at a dir that doesn't exist yet should return empty, not error.
+	st, _ := New(t.TempDir() + "/does-not-exist")
+	dates, err := st.AllDates()
+	if err != nil {
+		t.Fatalf("AllDates on non-existent dir: %v", err)
+	}
+	if len(dates) != 0 {
+		t.Errorf("expected 0 dates, got %d", len(dates))
+	}
+}
+
 func equalStringSlice(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

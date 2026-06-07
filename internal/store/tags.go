@@ -60,6 +60,12 @@ func (s *Store) ListTags() ([]TagCount, error) {
 // Returns the number of files modified. Returns an error if oldTag and newTag are identical
 // (case-insensitively).
 func (s *Store) RenameTag(oldTag, newTag string) (int, error) {
+	if oldTag == "" {
+		return 0, fmt.Errorf("old tag must not be empty")
+	}
+	if newTag == "" {
+		return 0, fmt.Errorf("new tag must not be empty")
+	}
 	if strings.EqualFold(oldTag, newTag) {
 		return 0, fmt.Errorf("old and new tag are the same: %q", oldTag)
 	}
@@ -79,6 +85,20 @@ func (s *Store) RenameTag(oldTag, newTag string) (int, error) {
 					changed = true
 				}
 			}
+			if !changed {
+				return nil
+			}
+			// Deduplicate after rename in case newTag was already present.
+			seen := make(map[string]bool, len(entry.Tags))
+			deduped := make([]string, 0, len(entry.Tags))
+			for _, tag := range entry.Tags {
+				key := strings.ToLower(tag)
+				if !seen[key] {
+					seen[key] = true
+					deduped = append(deduped, tag)
+				}
+			}
+			entry.Tags = deduped
 			return nil
 		})
 		if err != nil {

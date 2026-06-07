@@ -213,3 +213,46 @@ func TestTagsRenameCmd_RequiresTwoArgs(t *testing.T) {
 		t.Error("expected error with wrong argument count")
 	}
 }
+
+func TestTagsRenameCmd_DeduplicatesWhenNewTagAlreadyPresent(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetTagsFlags()
+
+	st, _ := store.New(dir)
+	// Entry has both auth and oauth; renaming auth→oauth should yield just [oauth].
+	makeTagEntry(t, st, time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local), []string{"auth", "oauth"})
+
+	buf := &bytes.Buffer{}
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"tags", "rename", "auth", "oauth"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("tags rename: %v", err)
+	}
+
+	e, _ := st.Load(time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local))
+	if len(e.Tags) != 1 || e.Tags[0] != "oauth" {
+		t.Errorf("tags after rename = %v, want [oauth]", e.Tags)
+	}
+}
+
+func TestTagsRenameCmd_CaseInsensitive(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetTagsFlags()
+
+	st, _ := store.New(dir)
+	makeTagEntry(t, st, time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local), []string{"Auth"})
+
+	buf := &bytes.Buffer{}
+	rootCmd.SetOut(buf)
+	rootCmd.SetArgs([]string{"tags", "rename", "auth", "authentication"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("tags rename: %v", err)
+	}
+
+	e, _ := st.Load(time.Date(2026, 1, 1, 0, 0, 0, 0, time.Local))
+	if len(e.Tags) != 1 || e.Tags[0] != "authentication" {
+		t.Errorf("tags = %v, want [authentication]", e.Tags)
+	}
+}

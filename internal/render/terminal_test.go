@@ -153,3 +153,37 @@ func TestItemsTerminal_Empty(t *testing.T) {
 		t.Errorf("expected (none) for empty list: %q", buf.String())
 	}
 }
+
+func TestTagsTerminal_Empty(t *testing.T) {
+	var buf bytes.Buffer
+	TagsTerminal([]store.TagCount{}, &buf)
+	if !strings.Contains(buf.String(), "(no tags)") {
+		t.Errorf("expected '(no tags)': %q", buf.String())
+	}
+}
+
+func TestTagsTerminal_ShowsTagsAndCounts(t *testing.T) {
+	tags := []store.TagCount{
+		{Tag: "auth", Count: 5},
+		{Tag: "backend", Count: 1},
+	}
+	var buf bytes.Buffer
+	TagsTerminal(tags, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "auth") {
+		t.Errorf("missing 'auth': %q", out)
+	}
+	if !strings.Contains(out, "5") {
+		t.Errorf("missing count '5': %q", out)
+	}
+	if !strings.Contains(out, "backend") {
+		t.Errorf("missing 'backend': %q", out)
+	}
+	if !strings.Contains(out, "1") {
+		t.Errorf("missing count '1': %q", out)
+	}
+	// auth should appear before backend
+	if strings.Index(out, "auth") > strings.Index(out, "backend") {
+		t.Errorf("auth should appear before backend:\n%s", out)
+	}
+}
