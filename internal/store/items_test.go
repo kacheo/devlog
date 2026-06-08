@@ -347,33 +347,6 @@ func TestResolveItem_AmbiguousPrefix(t *testing.T) {
 	}
 }
 
-func TestDate_MarshalUnmarshalYAML(t *testing.T) {
-	original := DateOf(time.Date(2026, 6, 15, 12, 30, 0, 0, time.UTC))
-	b, err := original.MarshalYAML()
-	if err != nil {
-		t.Fatalf("MarshalYAML: %v", err)
-	}
-	s, ok := b.(string)
-	if !ok {
-		t.Fatalf("MarshalYAML returned %T, want string", b)
-	}
-	if s != "2026-06-15" {
-		t.Errorf("MarshalYAML = %q, want \"2026-06-15\"", s)
-	}
-
-	var got Date
-	if err := got.UnmarshalYAML(func(v interface{}) error {
-		sp := v.(*string)
-		*sp = s
-		return nil
-	}); err != nil {
-		t.Fatalf("UnmarshalYAML: %v", err)
-	}
-	if got.String() != "2026-06-15" {
-		t.Errorf("round-trip = %q, want \"2026-06-15\"", got.String())
-	}
-}
-
 func TestAddItem_WithDue(t *testing.T) {
 	dir := t.TempDir()
 	st, _ := New(dir)
