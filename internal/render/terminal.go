@@ -27,6 +27,13 @@ func ShowTerminal(entry *store.DayEntry, blockers []store.Item, actionItems []st
 			if len(a.Dependencies) > 0 {
 				line += " (needs: " + formatDeps(a.Dependencies) + ")"
 			}
+			if a.Due != nil {
+				if a.IsOverdue() {
+					line += "  ⚠ OVERDUE (due " + a.Due.String() + ")"
+				} else {
+					line += "  (due " + a.Due.String() + ")"
+				}
+			}
 			fmt.Fprintln(w, line)
 		}
 	}
@@ -49,6 +56,13 @@ func ShowTerminal(entry *store.DayEntry, blockers []store.Item, actionItems []st
 			if len(b.Dependencies) > 0 {
 				line += " (needs: " + formatDeps(b.Dependencies) + ")"
 			}
+			if b.ETA != nil {
+				if b.IsETAExceeded() {
+					line += "  ⚠ ETA PASSED (eta " + b.ETA.String() + ")"
+				} else {
+					line += "  (eta " + b.ETA.String() + ")"
+				}
+			}
 			fmt.Fprintln(w, line)
 		}
 	}
@@ -63,6 +77,20 @@ func ItemsTerminal(items []store.Item, w io.Writer) {
 	}
 	for _, it := range items {
 		line := fmt.Sprintf("  [%s] %s", store.ShortID(it.ID), it.Text)
+		if it.Due != nil {
+			if it.IsOverdue() {
+				line += "  ⚠ OVERDUE (due " + it.Due.String() + ")"
+			} else {
+				line += "  (due " + it.Due.String() + ")"
+			}
+		}
+		if it.ETA != nil {
+			if it.IsETAExceeded() {
+				line += "  ⚠ ETA PASSED (eta " + it.ETA.String() + ")"
+			} else {
+				line += "  (eta " + it.ETA.String() + ")"
+			}
+		}
 		if it.Resolved && it.ResolvedAt != nil {
 			line += "  (resolved " + it.ResolvedAt.Format("2006-01-02") + ")"
 		}

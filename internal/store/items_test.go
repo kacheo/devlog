@@ -346,3 +346,133 @@ func TestResolveItem_AmbiguousPrefix(t *testing.T) {
 		t.Error("expected ambiguous id error")
 	}
 }
+
+func TestAddItem_WithDue(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	due := DateOf(time.Now().Add(48 * time.Hour))
+	item, err := st.AddItem("action_item", "finish report", []string{}, ItemOptions{Due: &due})
+	if err != nil {
+		t.Fatalf("AddItem with due: %v", err)
+	}
+	if item.Due == nil {
+		t.Fatal("Due should be set")
+	}
+	if item.Due.String() != due.String() {
+		t.Errorf("Due = %q, want %q", item.Due.String(), due.String())
+	}
+	if item.ETA != nil {
+		t.Error("ETA should be nil on action_item")
+	}
+
+	// Verify persisted
+	items, _ := st.LoadAllItems()
+	if items[0].Due == nil {
+		t.Error("Due not persisted")
+	}
+}
+
+func TestAddItem_DueOnBlocker_Errors(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	due := DateOf(time.Now().Add(48 * time.Hour))
+	_, err := st.AddItem("blocker", "external constraint", []string{}, ItemOptions{Due: &due})
+	if err == nil {
+		t.Error("expected error: --due is only valid on action_item, not blocker")
+	}
+}
+
+func TestAddItem_WithETA(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	eta := DateOf(time.Now().Add(72 * time.Hour))
+	item, err := st.AddItem("blocker", "waiting for infra", []string{}, ItemOptions{ETA: &eta})
+	if err != nil {
+		t.Fatalf("AddItem with eta: %v", err)
+	}
+	if item.ETA == nil {
+		t.Fatal("ETA should be set")
+	}
+	if item.ETA.String() != eta.String() {
+		t.Errorf("ETA = %q, want %q", item.ETA.String(), eta.String())
+	}
+	if item.Due != nil {
+		t.Error("Due should be nil on blocker")
+	}
+}
+
+func TestAddItem_ETAOnActionItem_Errors(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	eta := DateOf(time.Now().Add(48 * time.Hour))
+	_, err := st.AddItem("action_item", "write tests", []string{}, ItemOptions{ETA: &eta})
+	if err == nil {
+		t.Error("expected error: --eta is only valid on blocker, not action_item")
+	}
+}
+
+func TestItem_IsOverdue(t *testing.T) {
+	past := DateOf(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	future := DateOf(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC))
+
+	tests := []struct {
+		name     string
+		item     Item
+		wantOver bool
+	}{
+		{"no due date", Item{Type: "action_item"}, false},
+		{"future due date", Item{Type: "action_item", Due: &future}, false},
+		{"past due date", Item{Type: "action_item", Due: &past}, true},
+		{"past due but resolved", Item{Type: "action_item", Due: &past, Resolved: true}, false},
+		{"blocker with past eta", Item{Type: "blocker", ETA: &past}, false}, // ETA doesn't drive overdue
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.item.IsOverdue(); got != tt.wantOver {
+				t.Errorf("IsOverdue() = %v, want %v", got, tt.wantOver)
+			}
+		})
+	}
+}
+
+func TestItem_IsETAExceeded(t *testing.T) {
+	past := DateOf(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	future := DateOf(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC))
+
+	tests := []struct {
+		name    string
+		item    Item
+		wantExc bool
+	}{
+		{"no eta", Item{Type: "blocker"}, false},
+		{"future eta", Item{Type: "blocker", ETA: &future}, false},
+		{"past eta", Item{Type: "blocker", ETA: &past}, true},
+		{"past eta but resolved", Item{Type: "blocker", ETA: &past, Resolved: true}, false},
+		{"action_item with past due", Item{Type: "action_item", Due: &past}, false}, // Due doesn't drive IsETAExceeded
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.item.IsETAExceeded(); got != tt.wantExc {
+				t.Errorf("IsETAExceeded() = %v, want %v", got, tt.wantExc)
+			}
+		})
+	}
+}
+
+func TestAddItem_BackwardCompat_NoDue(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	// Existing callers pass no opts — must still work.
+	item, err := st.AddItem("blocker", "legacy call", []string{})
+	if err != nil {
+		t.Fatalf("AddItem without opts: %v", err)
+	}
+	if item.Due != nil || item.ETA != nil {
+		t.Error("Due and ETA should be nil when not provided")
+	}
+}

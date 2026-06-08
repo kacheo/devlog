@@ -11,13 +11,19 @@ import (
 	"github.com/kacheo/devlog/internal/store"
 )
 
+func resetAddFlags() {
+	addSection = ""
+	addTags = nil
+	addDeps = nil
+	addDue = ""
+	addETA = ""
+	globalDate = ""
+}
+
 func TestAddCmd_AppendsToNotes(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	// Reset flags between tests
-	addSection = ""
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	rootCmd.SetArgs([]string{"add", "hello world"})
 	if err := rootCmd.Execute(); err != nil {
@@ -45,10 +51,7 @@ func TestAddCmd_AppendsToNotes(t *testing.T) {
 func TestAddCmd_SectionFlag_Blockers(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = "blocker"
-	addDeps = nil
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	buf := &bytes.Buffer{}
 	rootCmd.SetOut(buf)
@@ -89,9 +92,7 @@ func TestAddCmd_SectionFlag_Blockers(t *testing.T) {
 func TestAddCmd_UnknownSection_Errors(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = ""
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	rootCmd.SetArgs([]string{"add", "--section", "diary", "text"})
 	err := rootCmd.Execute()
@@ -103,9 +104,7 @@ func TestAddCmd_UnknownSection_Errors(t *testing.T) {
 func TestAddCmd_RejectsUppercaseTag(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = ""
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	rootCmd.SetArgs([]string{"add", "--tag", "Auth", "some note"})
 	err := rootCmd.Execute()
@@ -117,9 +116,7 @@ func TestAddCmd_RejectsUppercaseTag(t *testing.T) {
 func TestAddCmd_RejectsHyphenatedTag(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = ""
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	rootCmd.SetArgs([]string{"add", "--tag", "auth-backend", "some note"})
 	err := rootCmd.Execute()
@@ -131,9 +128,7 @@ func TestAddCmd_RejectsHyphenatedTag(t *testing.T) {
 func TestAddCmd_RejectsEmptyTag(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = ""
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	rootCmd.SetArgs([]string{"add", "--tag", "", "some note"})
 	err := rootCmd.Execute()
@@ -142,12 +137,128 @@ func TestAddCmd_RejectsEmptyTag(t *testing.T) {
 	}
 }
 
+func TestAddCmd_DueFlag_ActionItem(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "action_item", "--due", "2099-12-31", "finish report"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	st, _ := store.New(dir)
+	items, _ := st.LoadAllItems()
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].Due == nil {
+		t.Fatal("Due should be set")
+	}
+	if items[0].Due.String() != "2099-12-31" {
+		t.Errorf("Due = %q, want 2099-12-31", items[0].Due.String())
+	}
+}
+
+func TestAddCmd_DueFlag_OnBlocker_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "blocker", "--due", "2099-12-31", "external block"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error: --due on blocker should fail")
+	}
+}
+
+func TestAddCmd_ETAFlag_Blocker(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "blocker", "--eta", "2026-09-01", "waiting on vendor"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	st, _ := store.New(dir)
+	items, _ := st.LoadAllItems()
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].ETA == nil {
+		t.Fatal("ETA should be set")
+	}
+	if items[0].ETA.String() != "2026-09-01" {
+		t.Errorf("ETA = %q, want 2026-09-01", items[0].ETA.String())
+	}
+}
+
+func TestAddCmd_ETAFlag_OnActionItem_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "action_item", "--eta", "2026-09-01", "write tests"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error: --eta on action_item should fail")
+	}
+}
+
+func TestAddCmd_DueFlag_InvalidDate_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "action_item", "--due", "not-a-date", "task"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for invalid --due date")
+	}
+}
+
+func TestAddCmd_DueFlag_TodayRelative(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "action_item", "--due", "today", "due today task"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v; --due today should be accepted", err)
+	}
+
+	st, _ := store.New(dir)
+	items, _ := st.LoadAllItems()
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].Due == nil {
+		t.Fatal("Due should be set")
+	}
+	today := store.DateOf(time.Now())
+	if items[0].Due.String() != today.String() {
+		t.Errorf("Due = %q, want %q (today)", items[0].Due.String(), today.String())
+	}
+}
+
+func TestAddCmd_DueFlag_OnNotesSection_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--due", "2099-12-31", "a note"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error: --due is not valid on notes section")
+	}
+}
+
 func TestAddCmd_TagFlag(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = ""
-	addTags = nil
-	globalDate = ""
+	resetAddFlags()
 
 	rootCmd.SetArgs([]string{"add", "--tag", "auth", "--tag", "backend", "tagged note"})
 	if err := rootCmd.Execute(); err != nil {

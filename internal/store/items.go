@@ -18,6 +18,32 @@ type Item struct {
 	Resolved     bool       `yaml:"resolved"`
 	ResolvedAt   *time.Time `yaml:"resolved_at,omitempty"`  // set when Resolved becomes true
 	Dependencies []string   `yaml:"dependencies"`           // UUIDs of other items
+	Due          *Date      `yaml:"due,omitempty"`          // due date for action_item only
+	ETA          *Date      `yaml:"eta,omitempty"`          // estimated resolution date for blocker only
+}
+
+// IsOverdue returns true when an action_item has a past due date and is not yet resolved.
+func (it *Item) IsOverdue() bool {
+	if it.Resolved || it.Due == nil {
+		return false
+	}
+	today := DateOf(time.Now())
+	return today.Time().After(it.Due.Time())
+}
+
+// IsETAExceeded returns true when a blocker has a past ETA and is not yet resolved.
+func (it *Item) IsETAExceeded() bool {
+	if it.Resolved || it.ETA == nil {
+		return false
+	}
+	today := DateOf(time.Now())
+	return today.Time().After(it.ETA.Time())
+}
+
+// ItemOptions carries optional fields for AddItem.
+type ItemOptions struct {
+	Due *Date // valid only on action_item
+	ETA *Date // valid only on blocker
 }
 
 type itemFile struct {
@@ -50,13 +76,26 @@ func (s *Store) LoadAllItems() ([]Item, error) {
 
 // AddItem validates and atomically appends a new item to items.yaml.
 // itemType must be "blocker" or "action_item". deps are 8-char prefixes or full UUIDs.
-func (s *Store) AddItem(itemType, text string, deps []string) (*Item, error) {
+// An optional ItemOptions may be passed to set Due (action_item only) or ETA (blocker only).
+func (s *Store) AddItem(itemType, text string, deps []string, opts ...ItemOptions) (*Item, error) {
 	if itemType != "blocker" && itemType != "action_item" {
 		return nil, fmt.Errorf("unknown item type %q: must be blocker or action_item", itemType)
 	}
 	if strings.TrimSpace(text) == "" {
 		return nil, fmt.Errorf("item text cannot be empty")
 	}
+
+	var opt ItemOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+	if opt.Due != nil && itemType != "action_item" {
+		return nil, fmt.Errorf("--due is only valid on action_item, not %s", itemType)
+	}
+	if opt.ETA != nil && itemType != "blocker" {
+		return nil, fmt.Errorf("--eta is only valid on blocker, not %s", itemType)
+	}
+
 	var added *Item
 	err := s.modifyItems(func(f *itemFile) error {
 		// Resolve dep prefixes to full UUIDs.
@@ -84,6 +123,8 @@ func (s *Store) AddItem(itemType, text string, deps []string) (*Item, error) {
 			Text:         text,
 			Resolved:     false,
 			Dependencies: fullDeps,
+			Due:          opt.Due,
+			ETA:          opt.ETA,
 		}
 		if item.Dependencies == nil {
 			item.Dependencies = []string{}
@@ -246,6 +287,17 @@ func ShortID(id string) string {
 		return id[:8]
 	}
 	return id
+}
+
+// FilterOverdue returns only action_item entries that are past their due date and unresolved.
+func FilterOverdue(items []Item) []Item {
+	out := make([]Item, 0, len(items))
+	for _, it := range items {
+		if it.IsOverdue() {
+			out = append(out, it)
+		}
+	}
+	return out
 }
 
 // FilterUnresolved returns only items where Resolved is false.

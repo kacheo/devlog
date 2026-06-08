@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kacheo/devlog/internal/store"
 )
@@ -12,6 +13,7 @@ import (
 func resetItemsFlags() {
 	itemsResolved = false
 	itemsAll = false
+	itemsOverdue = false
 	itemsType = ""
 	itemsFrom = ""
 	itemsUntil = ""
@@ -178,5 +180,72 @@ func TestItemsCmd_InvalidType(t *testing.T) {
 	err := rootCmd.Execute()
 	if err == nil {
 		t.Error("expected error for unknown --type")
+	}
+}
+
+func TestItemsCmd_Overdue(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetItemsFlags()
+
+	st, _ := store.New(dir)
+	past := store.DateOf(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
+	future := store.DateOf(time.Date(2099, 12, 31, 0, 0, 0, 0, time.UTC))
+	_, _ = st.AddItem("action_item", "overdue task", []string{}, store.ItemOptions{Due: &past})
+	_, _ = st.AddItem("action_item", "future task", []string{}, store.ItemOptions{Due: &future})
+	_, _ = st.AddItem("blocker", "plain blocker", []string{})
+
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"items", "--overdue"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "overdue task") {
+		t.Errorf("expected overdue task in output: %q", out)
+	}
+	if strings.Contains(out, "future task") {
+		t.Errorf("future task should not appear in overdue list: %q", out)
+	}
+	if strings.Contains(out, "plain blocker") {
+		t.Errorf("blocker should not appear in overdue list: %q", out)
+	}
+}
+
+func TestItemsCmd_OverdueAndResolvedMutuallyExclusive(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetItemsFlags()
+
+	rootCmd.SetArgs([]string{"items", "--overdue", "--resolved"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for --overdue --resolved")
+	}
+}
+
+func TestItemsCmd_OverdueAndFromMutuallyExclusive(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetItemsFlags()
+
+	rootCmd.SetArgs([]string{"items", "--overdue", "--from", "2026-01-01"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for --overdue --from")
+	}
+}
+
+func TestItemsCmd_OverdueWithBlockerType_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetItemsFlags()
+
+	rootCmd.SetArgs([]string{"items", "--overdue", "--type", "blockers"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for --overdue --type blockers")
 	}
 }

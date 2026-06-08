@@ -183,6 +183,69 @@ func TestItemsJSON_Empty(t *testing.T) {
 	}
 }
 
+func TestItemsJSON_WithDue(t *testing.T) {
+	due := store.DateOf(time.Date(2099, 12, 31, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "aabbccdd-0000-4000-8000-112233445566", Type: "action_item", Text: "ship it", Due: &due, Dependencies: []string{}},
+	}
+	b, err := ItemsJSON(items)
+	if err != nil {
+		t.Fatalf("ItemsJSON: %v", err)
+	}
+	var out []map[string]interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if out[0]["due"] != "2099-12-31" {
+		t.Errorf("due = %v, want 2099-12-31", out[0]["due"])
+	}
+	if out[0]["overdue"] != false {
+		t.Errorf("overdue = %v, want false for future due date", out[0]["overdue"])
+	}
+	if _, hasETA := out[0]["eta"]; hasETA {
+		t.Error("eta should be omitted when not set")
+	}
+}
+
+func TestItemsJSON_Overdue(t *testing.T) {
+	past := store.DateOf(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "aabbccdd-0000-4000-8000-112233445566", Type: "action_item", Text: "overdue task", Due: &past, Dependencies: []string{}},
+	}
+	b, err := ItemsJSON(items)
+	if err != nil {
+		t.Fatalf("ItemsJSON: %v", err)
+	}
+	var out []map[string]interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if out[0]["overdue"] != true {
+		t.Errorf("overdue = %v, want true for past due date", out[0]["overdue"])
+	}
+}
+
+func TestItemsJSON_WithETA(t *testing.T) {
+	eta := store.DateOf(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "blocker", Text: "vendor delay", ETA: &eta, Dependencies: []string{}},
+	}
+	b, err := ItemsJSON(items)
+	if err != nil {
+		t.Fatalf("ItemsJSON: %v", err)
+	}
+	var out []map[string]interface{}
+	if err := json.Unmarshal(b, &out); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	if out[0]["eta"] != "2026-08-15" {
+		t.Errorf("eta = %v, want 2026-08-15", out[0]["eta"])
+	}
+	if _, hasDue := out[0]["due"]; hasDue {
+		t.Error("due should be omitted when not set")
+	}
+}
+
 func TestTagsJSON_EmptySlice(t *testing.T) {
 	b, err := TagsJSON([]store.TagCount{})
 	if err != nil {

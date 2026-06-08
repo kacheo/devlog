@@ -154,6 +154,80 @@ func TestItemsTerminal_Empty(t *testing.T) {
 	}
 }
 
+func TestItemsTerminal_ShowsDueDate(t *testing.T) {
+	due := store.DateOf(time.Date(2099, 12, 31, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "action_item", Text: "finish report", Due: &due, Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "due 2099-12-31") {
+		t.Errorf("expected due date in output: %q", out)
+	}
+	if strings.Contains(out, "OVERDUE") {
+		t.Errorf("future due date should not show OVERDUE: %q", out)
+	}
+}
+
+func TestItemsTerminal_ShowsOverdue(t *testing.T) {
+	past := store.DateOf(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "action_item", Text: "overdue task", Due: &past, Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "OVERDUE") {
+		t.Errorf("expected OVERDUE marker in output: %q", out)
+	}
+}
+
+func TestItemsTerminal_ShowsETA(t *testing.T) {
+	eta := store.DateOf(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "blocker", Text: "waiting on vendor", ETA: &eta, Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "eta 2026-08-15") {
+		t.Errorf("expected eta in output: %q", out)
+	}
+}
+
+func TestItemsTerminal_ShowsETAPassed(t *testing.T) {
+	past := store.DateOf(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "blocker", Text: "past eta blocker", ETA: &past, Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "ETA PASSED") {
+		t.Errorf("expected ETA PASSED marker in output: %q", out)
+	}
+	if !strings.Contains(out, "2000-01-01") {
+		t.Errorf("expected eta date in output: %q", out)
+	}
+}
+
+func TestItemsTerminal_ShowsFutureETA(t *testing.T) {
+	future := store.DateOf(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC))
+	items := []store.Item{
+		{ID: "deadbeef-cafe-4000-8000-112233445566", Type: "blocker", Text: "future eta blocker", ETA: &future, Dependencies: []string{}},
+	}
+	var buf bytes.Buffer
+	ItemsTerminal(items, &buf)
+	out := buf.String()
+	if strings.Contains(out, "ETA PASSED") {
+		t.Errorf("future ETA should not show ETA PASSED: %q", out)
+	}
+	if !strings.Contains(out, "2099-01-01") {
+		t.Errorf("expected future eta date in output: %q", out)
+	}
+}
+
 func TestTagsTerminal_Empty(t *testing.T) {
 	var buf bytes.Buffer
 	TagsTerminal([]store.TagCount{}, &buf)

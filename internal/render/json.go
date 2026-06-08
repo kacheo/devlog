@@ -77,13 +77,16 @@ func toDayJSON(e *store.DayEntry, blockers []store.Item, actionItems []store.Ite
 
 // itemsEntryJSON is the JSON shape for a single item in the items command output.
 type itemsEntryJSON struct {
-	ID           string  `json:"id"`
-	ShortID      string  `json:"short_id"`
-	Type         string  `json:"type"`
-	Text         string  `json:"text"`
-	Resolved     bool    `json:"resolved"`
-	ResolvedAt   *string `json:"resolved_at,omitempty"` // RFC3339, omitted when nil
+	ID           string   `json:"id"`
+	ShortID      string   `json:"short_id"`
+	Type         string   `json:"type"`
+	Text         string   `json:"text"`
+	Resolved     bool     `json:"resolved"`
+	ResolvedAt   *string  `json:"resolved_at,omitempty"` // RFC3339, omitted when nil
 	Dependencies []string `json:"dependencies"`
+	Due          *string  `json:"due,omitempty"`     // YYYY-MM-DD, action_item only
+	ETA          *string  `json:"eta,omitempty"`     // YYYY-MM-DD, blocker only
+	Overdue      bool     `json:"overdue"`           // true when past due and unresolved
 }
 
 // ItemsJSON serializes a slice of items for the items command (--json output).
@@ -99,6 +102,15 @@ func ItemsJSON(items []store.Item) ([]byte, error) {
 			s := it.ResolvedAt.UTC().Format("2006-01-02T15:04:05Z")
 			resolvedAt = &s
 		}
+		var due, eta *string
+		if it.Due != nil {
+			s := it.Due.String()
+			due = &s
+		}
+		if it.ETA != nil {
+			s := it.ETA.String()
+			eta = &s
+		}
 		out[i] = itemsEntryJSON{
 			ID:           it.ID,
 			ShortID:      store.ShortID(it.ID),
@@ -107,6 +119,9 @@ func ItemsJSON(items []store.Item) ([]byte, error) {
 			Resolved:     it.Resolved,
 			ResolvedAt:   resolvedAt,
 			Dependencies: deps,
+			Due:          due,
+			ETA:          eta,
+			Overdue:      it.IsOverdue(),
 		}
 	}
 	return json.Marshal(out)

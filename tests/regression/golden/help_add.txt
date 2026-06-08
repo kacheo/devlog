@@ -5,6 +5,8 @@ Usage:
 
 Flags:
       --dep stringArray   dependency UUID (8-char prefix or full; repeatable)
+      --due string        due date for action_item (YYYY-MM-DD)
+      --eta string        estimated resolution date for blocker (YYYY-MM-DD)
   -h, --help              help for add
       --section string    section to append to (default: notes)
       --tag stringArray   add a tag to today's frontmatter (repeatable)
