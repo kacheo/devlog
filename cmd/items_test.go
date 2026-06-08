@@ -225,3 +225,27 @@ func TestItemsCmd_OverdueAndResolvedMutuallyExclusive(t *testing.T) {
 		t.Error("expected error for --overdue --resolved")
 	}
 }
+
+func TestItemsCmd_OverdueAndFromMutuallyExclusive(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetItemsFlags()
+
+	rootCmd.SetArgs([]string{"items", "--overdue", "--from", "2026-01-01"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for --overdue --from")
+	}
+}
+
+func TestItemsCmd_OverdueWithBlockerType_Errors(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetItemsFlags()
+
+	rootCmd.SetArgs([]string{"items", "--overdue", "--type", "blockers"})
+	err := rootCmd.Execute()
+	if err == nil {
+		t.Error("expected error for --overdue --type blockers")
+	}
+}

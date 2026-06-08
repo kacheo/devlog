@@ -57,7 +57,11 @@ func ShowTerminal(entry *store.DayEntry, blockers []store.Item, actionItems []st
 				line += " (needs: " + formatDeps(b.Dependencies) + ")"
 			}
 			if b.ETA != nil {
-				line += "  (eta " + b.ETA.String() + ")"
+				if b.IsETAExceeded() {
+					line += "  ⚠ ETA PASSED (eta " + b.ETA.String() + ")"
+				} else {
+					line += "  (eta " + b.ETA.String() + ")"
+				}
 			}
 			fmt.Fprintln(w, line)
 		}
@@ -81,7 +85,11 @@ func ItemsTerminal(items []store.Item, w io.Writer) {
 			}
 		}
 		if it.ETA != nil {
-			line += "  (eta " + it.ETA.String() + ")"
+			if it.IsETAExceeded() {
+				line += "  ⚠ ETA PASSED (eta " + it.ETA.String() + ")"
+			} else {
+				line += "  (eta " + it.ETA.String() + ")"
+			}
 		}
 		if it.Resolved && it.ResolvedAt != nil {
 			line += "  (resolved " + it.ResolvedAt.Format("2006-01-02") + ")"

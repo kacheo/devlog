@@ -12,8 +12,7 @@ type Date time.Time
 
 // DateOf returns a Date from a time.Time, truncating to day boundary in local time.
 func DateOf(t time.Time) Date {
-	y, m, d := t.Date()
-	return Date(time.Date(y, m, d, 0, 0, 0, 0, time.Local))
+	return Date(truncateToDay(t))
 }
 
 // String returns the date as YYYY-MM-DD.
@@ -41,6 +40,6 @@ func (d *Date) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return fmt.Errorf("invalid date %q: expected YYYY-MM-DD", s)
 	}
-	*d = Date(t)
+	*d = DateOf(t)
 	return nil
 }

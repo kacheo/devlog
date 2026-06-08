@@ -31,6 +31,15 @@ func (it *Item) IsOverdue() bool {
 	return today.Time().After(it.Due.Time())
 }
 
+// IsETAExceeded returns true when a blocker has a past ETA and is not yet resolved.
+func (it *Item) IsETAExceeded() bool {
+	if it.Resolved || it.ETA == nil {
+		return false
+	}
+	today := DateOf(time.Now())
+	return today.Time().After(it.ETA.Time())
+}
+
 // ItemOptions carries optional fields for AddItem.
 type ItemOptions struct {
 	Due *Date // valid only on action_item

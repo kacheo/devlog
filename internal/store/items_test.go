@@ -466,6 +466,30 @@ func TestItem_IsOverdue(t *testing.T) {
 	}
 }
 
+func TestItem_IsETAExceeded(t *testing.T) {
+	past := DateOf(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
+	future := DateOf(time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC))
+
+	tests := []struct {
+		name    string
+		item    Item
+		wantExc bool
+	}{
+		{"no eta", Item{Type: "blocker"}, false},
+		{"future eta", Item{Type: "blocker", ETA: &future}, false},
+		{"past eta", Item{Type: "blocker", ETA: &past}, true},
+		{"past eta but resolved", Item{Type: "blocker", ETA: &past, Resolved: true}, false},
+		{"action_item with past due", Item{Type: "action_item", Due: &past}, false}, // Due doesn't drive IsETAExceeded
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.item.IsETAExceeded(); got != tt.wantExc {
+				t.Errorf("IsETAExceeded() = %v, want %v", got, tt.wantExc)
+			}
+		})
+	}
+}
+
 func TestAddItem_BackwardCompat_NoDue(t *testing.T) {
 	dir := t.TempDir()
 	st, _ := New(dir)

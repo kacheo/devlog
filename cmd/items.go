@@ -59,6 +59,9 @@ func runItems(cmd *cobra.Command, _ []string) error {
 	if itemsOverdue && (itemsResolved || itemsAll) {
 		return fmt.Errorf("--overdue is mutually exclusive with --resolved and --all")
 	}
+	if itemsOverdue && (itemsFrom != "" || itemsUntil != "") {
+		return fmt.Errorf("--from and --until are not valid with --overdue")
+	}
 
 	// Validate --type
 	var wantType string
@@ -68,6 +71,10 @@ func runItems(cmd *cobra.Command, _ []string) error {
 			return fmt.Errorf("unknown --type %q: valid values are blockers, action_items", itemsType)
 		}
 		wantType = canonical
+	}
+
+	if itemsOverdue && wantType == "blockers" {
+		return fmt.Errorf("--overdue only applies to action_items; combine with --type action_items or omit --type")
 	}
 
 	// Parse date range for resolved filter

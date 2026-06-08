@@ -95,10 +95,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("--dep is only valid for blockers and action_items sections")
 	}
 	if addDue != "" {
-		return fmt.Errorf("--due is only valid for action_items section")
+		return fmt.Errorf("--due is only valid for the action_item section")
 	}
 	if addETA != "" {
-		return fmt.Errorf("--eta is only valid for blockers section")
+		return fmt.Errorf("--eta is only valid for the blocker section")
 	}
 
 	// Validate tags before touching any files
@@ -143,11 +143,11 @@ func containsStr(ss []string, s string) bool {
 	return false
 }
 
-// parseDateFlag parses a YYYY-MM-DD string into a store.Date.
+// parseDateFlag parses a date string (YYYY-MM-DD, "today", or "yesterday") into a store.Date.
 func parseDateFlag(s string) (store.Date, error) {
-	t, err := time.Parse("2006-01-02", s)
+	t, err := store.ParseDate(s)
 	if err != nil {
-		return store.Date{}, fmt.Errorf("invalid date %q: expected YYYY-MM-DD", s)
+		return store.Date{}, err
 	}
 	return store.DateOf(t), nil
 }

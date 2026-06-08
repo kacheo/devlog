@@ -51,7 +51,6 @@ func TestAddCmd_AppendsToNotes(t *testing.T) {
 func TestAddCmd_SectionFlag_Blockers(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
-	addSection = "blocker"
 	resetAddFlags()
 
 	buf := &bytes.Buffer{}
@@ -217,6 +216,30 @@ func TestAddCmd_DueFlag_InvalidDate_Errors(t *testing.T) {
 	err := rootCmd.Execute()
 	if err == nil {
 		t.Error("expected error for invalid --due date")
+	}
+}
+
+func TestAddCmd_DueFlag_TodayRelative(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetAddFlags()
+
+	rootCmd.SetArgs([]string{"add", "--section", "action_item", "--due", "today", "due today task"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("Execute() error = %v; --due today should be accepted", err)
+	}
+
+	st, _ := store.New(dir)
+	items, _ := st.LoadAllItems()
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].Due == nil {
+		t.Fatal("Due should be set")
+	}
+	today := store.DateOf(time.Now())
+	if items[0].Due.String() != today.String() {
+		t.Errorf("Due = %q, want %q (today)", items[0].Due.String(), today.String())
 	}
 }
 
