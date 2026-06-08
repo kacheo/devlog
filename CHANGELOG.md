@@ -9,9 +9,21 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ## [Unreleased]
 
+---
+
+## [0.2.0] — 2026-06-08
+
 ### Added
+- `devlog items` — list blockers and action items across all day files; flags: `--resolved`, `--all`, `--type`, `--from`, `--until`, `--json`
 - `devlog tags [list]` — list all tags across all day files with usage counts, sorted by frequency then alphabetically; `--json` supported
 - `devlog tags rename <old> <new>` — rename a tag (case-insensitive match) across all day files; preserves tag order, leaves unaffected files untouched
+- `--due YYYY-MM-DD` flag on `devlog add` for action items — displayed in `show` and `items` output, surfaced via `--overdue` filter
+- `--eta YYYY-MM-DD` flag on `devlog add` for blockers
+- `--overdue` flag on `devlog items` — filters to unresolved action items past their due date
+- Global UUIDs and `ResolvedAt` timestamps on blockers and action items (backward-compatible YAML)
+- DAG dependency support between items (cross-file references via UUID)
+- Sync progress status — prints per-repo status during `devlog sync`
+- Tag format enforcement — tags must contain only lowercase letters, digits, and underscores
 
 ---
 
@@ -44,5 +56,6 @@ Versioning: [Semantic Versioning](https://semver.org/)
 
 ---
 
-[Unreleased]: https://github.com/kacheo/devlog/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kacheo/devlog/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kacheo/devlog/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/kacheo/devlog/releases/tag/v0.1.0
