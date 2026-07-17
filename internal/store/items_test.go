@@ -188,6 +188,56 @@ func TestResolveItem_NotFound(t *testing.T) {
 	}
 }
 
+func TestReopenItem(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	item, _ := st.AddItem("blocker", "reopen me", []string{})
+	if _, err := st.ResolveItem(item.ID); err != nil {
+		t.Fatalf("ResolveItem: %v", err)
+	}
+
+	reopened, err := st.ReopenItem(item.ID)
+	if err != nil {
+		t.Fatalf("ReopenItem: %v", err)
+	}
+	if reopened.Resolved {
+		t.Error("item should be unresolved after reopen")
+	}
+	if reopened.ResolvedAt != nil {
+		t.Error("ResolvedAt should be cleared after reopen")
+	}
+
+	// Verify persisted
+	items, _ := st.LoadAllItems()
+	if len(items) != 1 || items[0].Resolved || items[0].ResolvedAt != nil {
+		t.Error("reopened state not persisted (want unresolved, nil ResolvedAt)")
+	}
+}
+
+func TestReopenItem_ByShortID(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	item, _ := st.AddItem("action_item", "write docs", []string{})
+	if _, err := st.ResolveItem(item.ID); err != nil {
+		t.Fatalf("ResolveItem: %v", err)
+	}
+	if _, err := st.ReopenItem(item.ID[:8]); err != nil {
+		t.Fatalf("ReopenItem by short ID: %v", err)
+	}
+}
+
+func TestReopenItem_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	_, err := st.ReopenItem("notfound")
+	if err == nil {
+		t.Error("expected error for nonexistent item")
+	}
+}
+
 func TestFilterUnresolved(t *testing.T) {
 	items := []Item{
 		{ID: "a", Text: "done", Resolved: true},

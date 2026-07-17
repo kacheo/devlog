@@ -169,6 +169,36 @@ func (s *Store) ResolveItem(id string) (*Item, error) {
 	return resolved, nil
 }
 
+// ReopenItem clears the resolved state of the item matching id (8-char prefix
+// or full UUID), flipping it back to unresolved and dropping its resolution
+// timestamp. It is the inverse of ResolveItem.
+func (s *Store) ReopenItem(id string) (*Item, error) {
+	var reopened *Item
+	err := s.modifyItems(func(f *itemFile) error {
+		var matches []*Item
+		for i := range f.Items {
+			if matchesID(f.Items[i].ID, id) {
+				matches = append(matches, &f.Items[i])
+			}
+		}
+		switch len(matches) {
+		case 0:
+			return fmt.Errorf("no item found matching id %q", id)
+		case 1:
+			matches[0].Resolved = false
+			matches[0].ResolvedAt = nil
+			reopened = matches[0]
+			return nil
+		default:
+			return fmt.Errorf("ambiguous id %q: matches %d items", id, len(matches))
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	return reopened, nil
+}
+
 // modifyItems atomically loads, mutates, and saves items.yaml under an exclusive lock.
 // The file is stored as a top-level YAML sequence of Item objects.
 func (s *Store) modifyItems(fn func(*itemFile) error) error {
