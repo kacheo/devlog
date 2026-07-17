@@ -215,6 +215,26 @@ func TestReopenItem(t *testing.T) {
 	}
 }
 
+func TestReopenItem_AlreadyUnresolved_Idempotent(t *testing.T) {
+	dir := t.TempDir()
+	st, _ := New(dir)
+
+	// Reopen an item that was never resolved: no error, stays unresolved.
+	item, _ := st.AddItem("blocker", "never resolved", []string{})
+	reopened, err := st.ReopenItem(item.ID)
+	if err != nil {
+		t.Fatalf("ReopenItem on unresolved item: %v", err)
+	}
+	if reopened.Resolved || reopened.ResolvedAt != nil {
+		t.Error("item should remain unresolved with no ResolvedAt")
+	}
+
+	items, _ := st.LoadAllItems()
+	if len(items) != 1 || items[0].Resolved || items[0].ResolvedAt != nil {
+		t.Error("unresolved state should be unchanged after no-op reopen")
+	}
+}
+
 func TestReopenItem_ByShortID(t *testing.T) {
 	dir := t.TempDir()
 	st, _ := New(dir)

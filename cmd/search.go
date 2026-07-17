@@ -73,8 +73,8 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	w := cmd.OutOrStdout()
 
 	if globalJSON {
-		// A nil slice marshals to "null"; emit "[]" for an empty result set.
-		if results == nil {
+		// A nil/empty slice marshals to "null"; emit "[]" for an empty result set.
+		if len(results) == 0 {
 			results = []store.SearchResult{}
 		}
 		out, err := json.Marshal(results)
