@@ -14,7 +14,7 @@ This guide covers the full command set, advanced filtering, workspace management
 - [AI Agent Integration](#ai-agent-integration)
 - [Troubleshooting](#troubleshooting)
 
-**Commands:** `init` · `add` · `edit` · `show` · `sync` · `search` · `rm` · `update` · `resolve` · `items` · `workspace` · `tags`
+**Commands:** `init` · `add` · `edit` · `show` · `sync` · `search` · `rm` · `update` · `resolve` · `reopen` · `items` · `workspace` · `tags`
 
 
 ---
@@ -276,6 +276,26 @@ devlog resolve a1b2c3d4
 
 # See the resolved item with its timestamp
 devlog items --resolved
+```
+
+---
+
+### `reopen`
+
+Reopen a resolved blocker or action item — the inverse of `resolve`. Clears the
+resolution timestamp and flips the item back to unresolved, so it reappears in the
+default `devlog items` view.
+
+```
+devlog reopen <id>
+```
+
+`<id>` is the full UUID or 8-character prefix, matched like `resolve`. Reopening an
+item that is already open is a harmless no-op.
+
+```bash
+# Resolved something prematurely? Reopen it.
+devlog reopen a1b2c3d4
 ```
 
 ---
