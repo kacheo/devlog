@@ -44,15 +44,46 @@ func TestSearchCmd_BasicMatch(t *testing.T) {
 	}
 }
 
-func TestSearchCmd_NoMatches_ExitsNonZero(t *testing.T) {
+func TestSearchCmd_NoMatches_ExitsZero(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("DEVLOG_DIR", dir)
 	resetSearchFlags()
 
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
 	rootCmd.SetArgs([]string{"search", "nonexistentquery12345"})
-	err := rootCmd.Execute()
-	if err == nil {
-		t.Error("expected non-zero exit when no matches, got nil error")
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("expected exit 0 when no matches, got error: %v", err)
+	}
+	if out := buf.String(); out != "" {
+		t.Errorf("expected empty stdout on no match, got: %q", out)
+	}
+}
+
+func TestSearchCmd_NoMatches_JSON_EmptyArray(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("DEVLOG_DIR", dir)
+	resetSearchFlags()
+	globalJSON = true
+	t.Cleanup(func() { globalJSON = false })
+
+	var buf bytes.Buffer
+	rootCmd.SetOut(&buf)
+	rootCmd.SetArgs([]string{"search", "--json", "nonexistentquery12345"})
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("expected exit 0 when no matches, got error: %v", err)
+	}
+
+	if got := strings.TrimSpace(buf.String()); got != "[]" {
+		t.Errorf("expected empty JSON array %q, got: %q", "[]", got)
+	}
+
+	var results []map[string]interface{}
+	if err := json.Unmarshal(buf.Bytes(), &results); err != nil {
+		t.Fatalf("output is not valid JSON array: %v\nOutput: %s", err, buf.String())
+	}
+	if len(results) != 0 {
+		t.Errorf("expected 0 results, got %d", len(results))
 	}
 }
 

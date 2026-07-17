@@ -70,13 +70,13 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if len(results) == 0 {
-		return fmt.Errorf("no matches for %q", opts.Query)
-	}
-
 	w := cmd.OutOrStdout()
 
 	if globalJSON {
+		// A nil slice marshals to "null"; emit "[]" for an empty result set.
+		if results == nil {
+			results = []store.SearchResult{}
+		}
 		out, err := json.Marshal(results)
 		if err != nil {
 			return err
@@ -85,6 +85,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// No matches is a normal, empty outcome (exit 0), not an error.
 	for _, r := range results {
 		fmt.Fprintf(w, "%s  |  %-12s  |  %s\n", r.Date, r.Section, r.Line)
 	}
